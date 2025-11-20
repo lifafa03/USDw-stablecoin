@@ -1,0 +1,33 @@
+# Node modules
+node_modules/
+package-lock.json
+
+# Wallets and credentials
+app/server/wallet/
+tests/chaincode/test-wallet/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Fabric artifacts
+*.tar.gz
+queryinstalled.txt
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment variables
+.env

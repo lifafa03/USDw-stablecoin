@@ -1,0 +1,22 @@
+{
+  "name": "stablecoin-chaincode-tests",
+  "version": "1.0.0",
+  "description": "Test suite for Stablecoin chaincode",
+  "scripts": {
+    "test": "mocha stablecoin.test.js --timeout 60000"
+  },
+  "engines": {
+    "node": ">=16",
+    "npm": ">=8"
+  },
+  "dependencies": {
+    "fabric-network": "^2.5.0",
+    "fabric-ca-client": "^2.5.0"
+  },
+  "devDependencies": {
+    "mocha": "^10.2.0",
+    "chai": "^4.3.10"
+  },
+  "author": "",
+  "license": "Apache-2.0"
+}

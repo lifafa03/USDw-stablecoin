@@ -1,0 +1,26 @@
+{
+  "name": "stablecoin-api-server",
+  "version": "1.0.0",
+  "description": "REST API server for Stablecoin chaincode on Hyperledger Fabric",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "engines": {
+    "node": ">=16",
+    "npm": ">=8"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "fabric-network": "^2.5.0",
+    "fabric-ca-client": "^2.5.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "author": "",
+  "license": "Apache-2.0"
+}

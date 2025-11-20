@@ -1,0 +1,19 @@
+{
+  "name": "stablecoin-chaincode",
+  "version": "1.0.0",
+  "description": "Hyperledger Fabric chaincode for account-based stablecoin",
+  "main": "index.js",
+  "scripts": {
+    "start": "fabric-chaincode-node start"
+  },
+  "engines": {
+    "node": ">=16",
+    "npm": ">=8"
+  },
+  "dependencies": {
+    "fabric-contract-api": "^2.5.0",
+    "fabric-shim": "^2.5.0"
+  },
+  "author": "",
+  "license": "Apache-2.0"
+}
