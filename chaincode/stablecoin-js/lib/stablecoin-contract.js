@@ -1,73 +1,140 @@
 'use strict';
 
+// Import the Fabric Contract API
+// This provides the base Contract class and access to the transaction context
 const { Contract } = require('fabric-contract-api');
 
+/**
+ * StablecoinContract - Account-based stablecoin implementation for Hyperledger Fabric
+ * 
+ * This smart contract implements a simple stablecoin with the following features:
+ * - Minting (creation of new tokens by admin)
+ * - Transfers between accounts
+ * - Burning (destruction of tokens)
+ * - Balance queries
+ * - Account freezing/unfreezing
+ * - Transaction history tracking
+ * 
+ * World State Structure:
+ * - Accounts are stored with composite key: "acct"~accountId
+ * - Total supply is stored with composite key: "meta"~"totalSupply"
+ * 
+ * @extends Contract
+ */
 class StablecoinContract extends Contract {
 
     // ==================== Helper Methods ====================
+    // These private methods handle low-level operations with the ledger
 
     /**
      * Get an account from the world state
-     * @param {Context} ctx - The transaction context
-     * @param {string} accountId - The account ID
-     * @returns {Promise<Object>} The account object
+     * 
+     * This helper function retrieves account information from Fabric's world state.
+     * If the account doesn't exist, it returns a new account with zero balance.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @param {string} accountId - The unique identifier for the account
+     * @returns {Promise<Object>} The account object with structure: { balance: number, frozen: boolean }
      */
     async _getAccount(ctx, accountId) {
+        // Create a composite key for the account
+        // Composite keys provide a way to organize data in the ledger
+        // Format: "acct"~accountId (e.g., "acct~alice")
         const accountKey = ctx.stub.createCompositeKey('acct', [accountId]);
+        
+        // Retrieve the account data from the world state
+        // getState returns a Buffer (byte array) or null if not found
         const accountBytes = await ctx.stub.getState(accountKey);
         
+        // Check if account exists in the ledger
         if (!accountBytes || accountBytes.length === 0) {
+            // Return a new account with default values
+            // This allows queries on non-existent accounts without errors
             return { balance: 0, frozen: false };
         }
         
+        // Parse the JSON string stored in the ledger and return as JavaScript object
         return JSON.parse(accountBytes.toString());
     }
 
     /**
      * Save an account to the world state
-     * @param {Context} ctx - The transaction context
-     * @param {string} accountId - The account ID
-     * @param {Object} account - The account object
+     * 
+     * This helper function persists account information to Fabric's world state.
+     * The account data is serialized to JSON before storage.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @param {string} accountId - The unique identifier for the account
+     * @param {Object} account - The account object to save (must contain balance and frozen)
      */
     async _putAccount(ctx, accountId, account) {
+        // Create the same composite key format used in _getAccount
         const accountKey = ctx.stub.createCompositeKey('acct', [accountId]);
+        
+        // Convert the account object to JSON string, then to Buffer
+        // putState requires a Buffer as the value parameter
         await ctx.stub.putState(accountKey, Buffer.from(JSON.stringify(account)));
     }
 
     /**
      * Get the total supply from the world state
-     * @param {Context} ctx - The transaction context
-     * @returns {Promise<number>} The total supply
+     * 
+     * Total supply represents the sum of all tokens in circulation.
+     * It increases with Mint operations and decreases with Burn operations.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @returns {Promise<number>} The current total supply of tokens
      */
     async _getTotalSupply(ctx) {
+        // Create composite key for the metadata
+        // Using "meta" prefix to distinguish from account keys
         const supplyKey = ctx.stub.createCompositeKey('meta', ['totalSupply']);
+        
+        // Retrieve the total supply value from world state
         const supplyBytes = await ctx.stub.getState(supplyKey);
         
+        // If total supply hasn't been initialized, return 0
         if (!supplyBytes || supplyBytes.length === 0) {
             return 0;
         }
         
+        // Parse the stored value as a floating-point number
         return parseFloat(supplyBytes.toString());
     }
 
     /**
      * Save the total supply to the world state
-     * @param {Context} ctx - The transaction context
-     * @param {number} supply - The total supply value
+     * 
+     * This helper updates the total supply counter in the ledger.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @param {number} supply - The new total supply value to store
      */
     async _putTotalSupply(ctx, supply) {
+        // Create the same composite key format used in _getTotalSupply
         const supplyKey = ctx.stub.createCompositeKey('meta', ['totalSupply']);
+        
+        // Convert the number to string, then to Buffer for storage
         await ctx.stub.putState(supplyKey, Buffer.from(supply.toString()));
     }
 
     /**
      * Check if the caller is an admin
-     * @param {Context} ctx - The transaction context
+     * 
+     * For Phase 1, only members of Org1MSP are considered administrators.
+     * Administrators have permission to mint tokens and freeze/unfreeze accounts.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
      * @returns {boolean} True if admin, throws error otherwise
+     * @throws {Error} If the caller is not an admin
      */
     _isAdmin(ctx) {
+        // Get the MSP (Membership Service Provider) ID of the transaction submitter
+        // In Fabric, identity and access control are managed through MSPs
         const mspId = ctx.clientIdentity.getMSPID();
+        
         // For Phase 1, only Org1MSP is considered admin
+        // In production, this could be enhanced with attribute-based access control (ABAC)
         if (mspId !== 'Org1MSP') {
             throw new Error(`Only admin (Org1MSP) can perform this operation. Current MSP: ${mspId}`);
         }
@@ -76,12 +143,19 @@ class StablecoinContract extends Contract {
 
     /**
      * Validate and parse amount
-     * @param {string} amount - The amount string
-     * @returns {number} The parsed amount
+     * 
+     * This helper ensures that amount parameters are valid positive numbers.
+     * It prevents negative amounts, zero amounts, and non-numeric inputs.
+     * 
+     * @param {string} amount - The amount string to validate
+     * @returns {number} The parsed amount as a number
+     * @throws {Error} If the amount is invalid
      */
     _validateAmount(amount) {
+        // Convert string to number (handles both integer and decimal strings)
         const parsedAmount = parseFloat(amount);
         
+        // Check if parsing failed or if the amount is not positive
         if (isNaN(parsedAmount) || parsedAmount <= 0) {
             throw new Error(`Invalid amount: ${amount}. Amount must be a positive number.`);
         }
@@ -90,47 +164,87 @@ class StablecoinContract extends Contract {
     }
 
     // ==================== Public Transaction Methods ====================
+    // These methods are exposed as chaincode functions and can be invoked by clients
 
     /**
      * Initialize the ledger (optional, called during instantiation)
-     * @param {Context} ctx - The transaction context
+     * 
+     * This function is typically called once when the chaincode is first deployed.
+     * It sets up the initial state of the ledger, starting with zero total supply.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @returns {Object} Success message
      */
     async InitLedger(ctx) {
         console.log('Initializing stablecoin ledger');
+        
+        // Set initial total supply to 0
+        // All tokens must be explicitly minted by an admin
         await this._putTotalSupply(ctx, 0);
+        
         return { message: 'Ledger initialized successfully' };
     }
 
     /**
      * Mint new tokens to an account (admin only)
-     * @param {Context} ctx - The transaction context
-     * @param {string} accountId - The account to mint to
-     * @param {string} amount - The amount to mint
-     * @returns {Promise<Object>} Transaction result
+     * 
+     * Minting creates new tokens out of thin air and adds them to a specified account.
+     * This operation increases both the account balance and the total supply.
+     * Only administrators (Org1MSP members) can mint tokens.
+     * 
+     * Use cases:
+     * - Initial distribution of tokens
+     * - Backing new tokens with reserves (in a real CBDC)
+     * - Expanding the money supply
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @param {string} accountId - The account to receive the newly minted tokens
+     * @param {string} amount - The number of tokens to mint (as string)
+     * @returns {Promise<Object>} Transaction result with new balances
+     * @throws {Error} If caller is not admin or if inputs are invalid
      */
     async Mint(ctx, accountId, amount) {
-        // Validate inputs
+        // Step 1: Validate inputs
+        // Ensure accountId is provided and not empty
         if (!accountId || accountId.trim() === '') {
             throw new Error('Account ID must be provided');
         }
         
+        // Step 2: Check permissions
+        // Only admins can mint tokens (throws error if not admin)
         this._isAdmin(ctx);
+        
+        // Step 3: Validate and parse the amount
+        // This ensures amount is a positive number
         const mintAmount = this._validateAmount(amount);
 
-        // Get current state
+        // Step 4: Retrieve current state from the ledger
+        // Get the target account (creates new one if doesn't exist)
         const account = await this._getAccount(ctx, accountId);
+        
+        // Get the current total supply
         const totalSupply = await this._getTotalSupply(ctx);
 
-        // Update balances
+        // Step 5: Update balances
+        // Add the minted amount to the account's existing balance
+        // Using || 0 as a safety check in case balance is undefined
         account.balance = (account.balance || 0) + mintAmount;
+        
+        // Increase the total supply by the minted amount
         const newTotalSupply = totalSupply + mintAmount;
 
-        // Save state
+        // Step 6: Persist the updated state to the ledger
+        // Save the updated account
         await this._putAccount(ctx, accountId, account);
+        
+        // Save the updated total supply
         await this._putTotalSupply(ctx, newTotalSupply);
 
+        // Step 7: Log the operation for debugging/auditing
         console.log(`Minted ${mintAmount} to ${accountId}. New balance: ${account.balance}`);
         
+        // Step 8: Return transaction result
+        // This result is returned to the client and recorded in the transaction
         return {
             accountId: accountId,
             amount: mintAmount,
@@ -141,36 +255,59 @@ class StablecoinContract extends Contract {
 
     /**
      * Transfer tokens from one account to another
-     * @param {Context} ctx - The transaction context
-     * @param {string} fromAccountId - The sender account
-     * @param {string} toAccountId - The receiver account
-     * @param {string} amount - The amount to transfer
-     * @returns {Promise<Object>} Transaction result
+     * 
+     * This function implements peer-to-peer token transfers between accounts.
+     * It performs a double-entry bookkeeping operation: deducting from sender
+     * and crediting to receiver. The total supply remains unchanged.
+     * 
+     * Business rules enforced:
+     * - Sender must have sufficient balance
+     * - Sender account must not be frozen
+     * - Cannot transfer to the same account
+     * - Amount must be positive
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @param {string} fromAccountId - The sender's account ID
+     * @param {string} toAccountId - The receiver's account ID
+     * @param {string} amount - The number of tokens to transfer (as string)
+     * @returns {Promise<Object>} Transaction result with updated balances
+     * @throws {Error} If validation fails or insufficient balance
      */
     async Transfer(ctx, fromAccountId, toAccountId, amount) {
-        // Validate inputs
+        // Step 1: Validate input parameters
+        // Check that sender account ID is provided
         if (!fromAccountId || fromAccountId.trim() === '') {
             throw new Error('From account ID must be provided');
         }
+        
+        // Check that receiver account ID is provided
         if (!toAccountId || toAccountId.trim() === '') {
             throw new Error('To account ID must be provided');
         }
+        
+        // Prevent transfers to the same account (would be pointless and could mask errors)
         if (fromAccountId === toAccountId) {
             throw new Error('Cannot transfer to the same account');
         }
         
+        // Step 2: Validate and parse the transfer amount
         const transferAmount = this._validateAmount(amount);
 
-        // Get accounts
+        // Step 3: Retrieve both accounts from the ledger
+        // Load sender's account
         const fromAccount = await this._getAccount(ctx, fromAccountId);
+        
+        // Load receiver's account (creates new account if doesn't exist)
         const toAccount = await this._getAccount(ctx, toAccountId);
 
-        // Check if sender account is frozen
+        // Step 4: Check business rules
+        // Verify sender account is not frozen (frozen accounts cannot send transfers)
         if (fromAccount.frozen) {
             throw new Error(`Account ${fromAccountId} is frozen`);
         }
 
-        // Check sufficient balance
+        // Step 5: Verify sender has sufficient balance
+        // This is critical to prevent double-spending and negative balances
         if (fromAccount.balance < transferAmount) {
             throw new Error(
                 `Insufficient balance. Account ${fromAccountId} has ${fromAccount.balance}, ` +
@@ -178,16 +315,26 @@ class StablecoinContract extends Contract {
             );
         }
 
-        // Update balances
+        // Step 6: Execute the transfer (double-entry bookkeeping)
+        // Deduct the amount from sender's balance
         fromAccount.balance -= transferAmount;
+        
+        // Add the amount to receiver's balance
+        // Using || 0 as safety for new accounts
         toAccount.balance = (toAccount.balance || 0) + transferAmount;
 
-        // Save state
+        // Step 7: Persist both updated accounts to the ledger
+        // Save sender's account with reduced balance
         await this._putAccount(ctx, fromAccountId, fromAccount);
+        
+        // Save receiver's account with increased balance
         await this._putAccount(ctx, toAccountId, toAccount);
 
+        // Step 8: Log the transaction for debugging/auditing
         console.log(`Transferred ${transferAmount} from ${fromAccountId} to ${toAccountId}`);
         
+        // Step 9: Return transaction details
+        // Note: Total supply is not changed during transfers
         return {
             from: fromAccountId,
             to: toAccountId,
@@ -199,24 +346,41 @@ class StablecoinContract extends Contract {
 
     /**
      * Burn tokens from an account
-     * @param {Context} ctx - The transaction context
-     * @param {string} accountId - The account to burn from
-     * @param {string} amount - The amount to burn
-     * @returns {Promise<Object>} Transaction result
+     * 
+     * Burning destroys tokens, permanently removing them from circulation.
+     * This operation decreases both the account balance and the total supply.
+     * Any user can burn tokens from their own account (no admin restriction).
+     * 
+     * Use cases:
+     * - Reducing money supply (deflationary policy)
+     * - Redeeming tokens for underlying reserves
+     * - Removing tokens from circulation
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @param {string} accountId - The account from which to burn tokens
+     * @param {string} amount - The number of tokens to burn (as string)
+     * @returns {Promise<Object>} Transaction result with new balances
+     * @throws {Error} If inputs are invalid or insufficient balance
      */
     async Burn(ctx, accountId, amount) {
-        // Validate inputs
+        // Step 1: Validate inputs
+        // Ensure account ID is provided
         if (!accountId || accountId.trim() === '') {
             throw new Error('Account ID must be provided');
         }
         
+        // Step 2: Validate and parse the burn amount
         const burnAmount = this._validateAmount(amount);
 
-        // Get current state
+        // Step 3: Retrieve current state from the ledger
+        // Get the account to burn from
         const account = await this._getAccount(ctx, accountId);
+        
+        // Get the current total supply
         const totalSupply = await this._getTotalSupply(ctx);
 
-        // Check sufficient balance
+        // Step 4: Verify sufficient balance
+        // Cannot burn more tokens than the account holds
         if (account.balance < burnAmount) {
             throw new Error(
                 `Insufficient balance to burn. Account ${accountId} has ${account.balance}, ` +
@@ -224,16 +388,24 @@ class StablecoinContract extends Contract {
             );
         }
 
-        // Update balances
+        // Step 5: Update balances
+        // Deduct the burned amount from the account
         account.balance -= burnAmount;
+        
+        // Decrease the total supply by the burned amount
         const newTotalSupply = totalSupply - burnAmount;
 
-        // Save state
+        // Step 6: Persist the updated state to the ledger
+        // Save the updated account balance
         await this._putAccount(ctx, accountId, account);
+        
+        // Save the updated total supply
         await this._putTotalSupply(ctx, newTotalSupply);
 
+        // Step 7: Log the operation for debugging/auditing
         console.log(`Burned ${burnAmount} from ${accountId}. New balance: ${account.balance}`);
         
+        // Step 8: Return transaction result
         return {
             accountId: accountId,
             amount: burnAmount,
@@ -244,17 +416,27 @@ class StablecoinContract extends Contract {
 
     /**
      * Get the balance of an account
-     * @param {Context} ctx - The transaction context
-     * @param {string} accountId - The account ID
-     * @returns {Promise<Object>} The account balance and frozen status
+     * 
+     * This is a read-only query function that returns the current balance
+     * and frozen status of an account. It does not modify the ledger state.
+     * If the account doesn't exist, returns a balance of 0.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @param {string} accountId - The account ID to query
+     * @returns {Promise<Object>} Account information including balance and frozen status
+     * @throws {Error} If account ID is not provided
      */
     async BalanceOf(ctx, accountId) {
+        // Step 1: Validate input
         if (!accountId || accountId.trim() === '') {
             throw new Error('Account ID must be provided');
         }
         
+        // Step 2: Retrieve the account from the ledger
+        // If account doesn't exist, _getAccount returns { balance: 0, frozen: false }
         const account = await this._getAccount(ctx, accountId);
         
+        // Step 3: Return account information
         return {
             accountId: accountId,
             balance: account.balance,
@@ -264,12 +446,19 @@ class StablecoinContract extends Contract {
 
     /**
      * Get the total supply of the stablecoin
-     * @param {Context} ctx - The transaction context
-     * @returns {Promise<Object>} The total supply
+     * 
+     * This is a read-only query function that returns the current total
+     * number of tokens in circulation across all accounts.
+     * Total supply = sum of all minted tokens - sum of all burned tokens
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @returns {Promise<Object>} Object containing the total supply
      */
     async TotalSupply(ctx) {
+        // Step 1: Retrieve total supply from the ledger
         const totalSupply = await this._getTotalSupply(ctx);
         
+        // Step 2: Return the result
         return {
             totalSupply: totalSupply
         };
@@ -277,44 +466,78 @@ class StablecoinContract extends Contract {
 
     /**
      * Get the transaction history for an account
-     * @param {Context} ctx - The transaction context
-     * @param {string} accountId - The account ID
-     * @returns {Promise<Array>} Array of historical records
+     * 
+     * This function leverages Hyperledger Fabric's built-in history feature to
+     * retrieve all historical states of an account. Each time an account is
+     * modified, Fabric records the change with a transaction ID and timestamp.
+     * 
+     * This is useful for:
+     * - Auditing account activity
+     * - Investigating disputes
+     * - Regulatory compliance (transaction tracking)
+     * - Analyzing account behavior patterns
+     * 
+     * Note: The history API returns ALL modifications to a key, in order.
+     * In production, you might want to implement pagination for accounts
+     * with many transactions.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
+     * @param {string} accountId - The account ID to query history for
+     * @returns {Promise<Array>} Array of historical records with timestamps and balances
+     * @throws {Error} If account ID is not provided
      */
     async GetAccountHistory(ctx, accountId) {
+        // Step 1: Validate input
         if (!accountId || accountId.trim() === '') {
             throw new Error('Account ID must be provided');
         }
 
+        // Step 2: Create the composite key for the account
         const accountKey = ctx.stub.createCompositeKey('acct', [accountId]);
+        
+        // Array to store historical records
         const history = [];
 
-        // Get history iterator
+        // Step 3: Get the history iterator from Fabric
+        // This returns an iterator over all historical values for this key
+        // Each iteration provides: value, timestamp, txId, isDelete flag
         const iterator = await ctx.stub.getHistoryForKey(accountKey);
 
         try {
+            // Step 4: Iterate through all historical records
             let result = await iterator.next();
             
+            // Continue until there are no more records
             while (!result.done) {
+                // Extract transaction metadata
                 const record = {
-                    txId: result.value.txId,
-                    timestamp: result.value.timestamp,
-                    isDelete: result.value.isDelete
+                    txId: result.value.txId,           // Transaction ID that modified this key
+                    timestamp: result.value.timestamp,  // When the transaction occurred
+                    isDelete: result.value.isDelete     // Whether this was a delete operation
                 };
 
+                // Step 5: Parse the historical value if it exists
+                // If this wasn't a delete operation and there's data
                 if (!result.value.isDelete && result.value.value) {
+                    // Parse the account data from this point in history
                     const accountData = JSON.parse(result.value.value.toString());
                     record.balance = accountData.balance;
                     record.frozen = accountData.frozen || false;
                 }
 
+                // Add this record to the history array
                 history.push(record);
+                
+                // Move to the next historical record
                 result = await iterator.next();
             }
         } finally {
+            // Step 6: Always close the iterator to free resources
+            // This is critical to prevent resource leaks
             await iterator.close();
         }
 
+        // Step 7: Return the complete history
         return {
             accountId: accountId,
             history: history
@@ -323,24 +546,45 @@ class StablecoinContract extends Contract {
 
     /**
      * Freeze an account (admin only)
-     * @param {Context} ctx - The transaction context
+     * 
+     * Freezing an account prevents it from making transfers (sending tokens).
+     * Frozen accounts can still receive tokens and have their balance queried.
+     * This is a regulatory/compliance feature for:
+     * - Suspicious activity investigation
+     * - Court orders/legal holds
+     * - AML/KYC violations
+     * - Security incidents
+     * 
+     * Only administrators can freeze accounts.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
      * @param {string} accountId - The account to freeze
-     * @returns {Promise<Object>} Transaction result
+     * @returns {Promise<Object>} Transaction result with frozen status
+     * @throws {Error} If caller is not admin or account ID is invalid
      */
     async FreezeAccount(ctx, accountId) {
+        // Step 1: Validate input
         if (!accountId || accountId.trim() === '') {
             throw new Error('Account ID must be provided');
         }
         
+        // Step 2: Check permissions
+        // Only admins can freeze accounts
         this._isAdmin(ctx);
 
+        // Step 3: Retrieve the account
         const account = await this._getAccount(ctx, accountId);
+        
+        // Step 4: Set the frozen flag to true
         account.frozen = true;
         
+        // Step 5: Save the updated account state
         await this._putAccount(ctx, accountId, account);
 
+        // Step 6: Log the action for auditing
         console.log(`Account ${accountId} has been frozen`);
         
+        // Step 7: Return confirmation
         return {
             accountId: accountId,
             frozen: true,
@@ -350,24 +594,40 @@ class StablecoinContract extends Contract {
 
     /**
      * Unfreeze an account (admin only)
-     * @param {Context} ctx - The transaction context
+     * 
+     * Unfreezing removes the transfer restriction from a previously frozen account.
+     * The account can resume normal operations (sending and receiving tokens).
+     * 
+     * Only administrators can unfreeze accounts.
+     * 
+     * @param {Context} ctx - The transaction context provided by Fabric
      * @param {string} accountId - The account to unfreeze
-     * @returns {Promise<Object>} Transaction result
+     * @returns {Promise<Object>} Transaction result with unfrozen status
+     * @throws {Error} If caller is not admin or account ID is invalid
      */
     async UnfreezeAccount(ctx, accountId) {
+        // Step 1: Validate input
         if (!accountId || accountId.trim() === '') {
             throw new Error('Account ID must be provided');
         }
         
+        // Step 2: Check permissions
+        // Only admins can unfreeze accounts
         this._isAdmin(ctx);
 
+        // Step 3: Retrieve the account
         const account = await this._getAccount(ctx, accountId);
+        
+        // Step 4: Set the frozen flag to false
         account.frozen = false;
         
+        // Step 5: Save the updated account state
         await this._putAccount(ctx, accountId, account);
 
+        // Step 6: Log the action for auditing
         console.log(`Account ${accountId} has been unfrozen`);
         
+        // Step 7: Return confirmation
         return {
             accountId: accountId,
             frozen: false,
@@ -376,4 +636,5 @@ class StablecoinContract extends Contract {
     }
 }
 
+// Export the contract class so it can be discovered by Fabric
 module.exports = StablecoinContract;
