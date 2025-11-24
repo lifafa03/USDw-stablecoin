@@ -1,0 +1,2 @@
+Installed chaincodes on peer:
+Package ID: stablecoin_1.0:09c4f16f4d06d56547b2966b5478bf8fc69e5c7ae16ce669397489c6baec218d, Label: stablecoin_1.0
