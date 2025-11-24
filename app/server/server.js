@@ -22,6 +22,16 @@
  * - GET    /history/:accountId - Get account transaction history
  * - POST   /freeze            - Freeze an account (admin only)
  * - POST   /unfreeze          - Unfreeze an account (admin only)
+ * - POST   /pause             - Pause transfers (pauser role)
+ * - POST   /unpause           - Unpause transfers (pauser role)
+ * - GET    /status/paused     - Check pause status
+ * - GET    /metadata          - Token metadata
+ * - POST   /blocklist/add     - Blocklist an account (blocklister role)
+ * - POST   /blocklist/remove  - Remove account from blocklist (blocklister role)
+ * - GET    /blocklist/:accountId - Check blocklist status
+ * - POST   /roles/add         - Add MSP to a role (admin only)
+ * - POST   /roles/remove      - Remove MSP from a role (admin only)
+ * - GET    /roles             - List roles and members
  * - GET    /health            - Health check endpoint
  * 
  * Error Handling:
@@ -152,6 +162,28 @@ const validateAccountId = (accountId) => {
         };
     }
     
+    return { valid: true };
+};
+
+const validateRole = (role) => {
+    if (!role || role.trim() === '') {
+        return { valid: false, error: 'Role is required' };
+    }
+    const validFormat = /^[a-zA-Z0-9_-]+$/.test(role);
+    if (!validFormat) {
+        return { valid: false, error: 'Role must contain only letters, numbers, underscores, and hyphens' };
+    }
+    return { valid: true };
+};
+
+const validateMsp = (mspId) => {
+    if (!mspId || mspId.trim() === '') {
+        return { valid: false, error: 'MSP ID is required' };
+    }
+    const validFormat = /^[a-zA-Z0-9.-]+$/.test(mspId);
+    if (!validFormat) {
+        return { valid: false, error: 'MSP ID must contain only letters, numbers, dots, and hyphens' };
+    }
     return { valid: true };
 };
 
@@ -399,6 +431,102 @@ app.get('/totalsupply', asyncHandler(async (req, res) => {
 }));
 
 /**
+ * Get metadata endpoint
+ */
+app.get('/metadata', asyncHandler(async (req, res) => {
+    const result = await fabricClient.metadata();
+    res.json({
+        success: true,
+        data: result
+    });
+}));
+
+/**
+ * Pause transfers
+ */
+app.post('/pause', asyncHandler(async (req, res) => {
+    const result = await fabricClient.pause();
+    res.json({
+        success: true,
+        data: result,
+        message: 'Transfers paused'
+    });
+}));
+
+/**
+ * Unpause transfers
+ */
+app.post('/unpause', asyncHandler(async (req, res) => {
+    const result = await fabricClient.unpause();
+    res.json({
+        success: true,
+        data: result,
+        message: 'Transfers unpaused'
+    });
+}));
+
+/**
+ * Pause status
+ */
+app.get('/status/paused', asyncHandler(async (req, res) => {
+    const result = await fabricClient.isPaused();
+    res.json({
+        success: true,
+        data: result
+    });
+}));
+
+/**
+ * Blocklist add
+ */
+app.post('/blocklist/add', asyncHandler(async (req, res) => {
+    const { accountId } = req.body;
+    const accountValidation = validateAccountId(accountId);
+    if (!accountValidation.valid) {
+        return res.status(400).json({ success: false, error: accountValidation.error });
+    }
+    const result = await fabricClient.addToBlocklist(accountId);
+    res.json({
+        success: true,
+        data: result,
+        message: `Account ${accountId} blocklisted`
+    });
+}));
+
+/**
+ * Blocklist remove
+ */
+app.post('/blocklist/remove', asyncHandler(async (req, res) => {
+    const { accountId } = req.body;
+    const accountValidation = validateAccountId(accountId);
+    if (!accountValidation.valid) {
+        return res.status(400).json({ success: false, error: accountValidation.error });
+    }
+    const result = await fabricClient.removeFromBlocklist(accountId);
+    res.json({
+        success: true,
+        data: result,
+        message: `Account ${accountId} removed from blocklist`
+    });
+}));
+
+/**
+ * Blocklist check
+ */
+app.get('/blocklist/:accountId', asyncHandler(async (req, res) => {
+    const { accountId } = req.params;
+    const accountValidation = validateAccountId(accountId);
+    if (!accountValidation.valid) {
+        return res.status(400).json({ success: false, error: accountValidation.error });
+    }
+    const result = await fabricClient.isBlocked(accountId);
+    res.json({
+        success: true,
+        data: result
+    });
+}));
+
+/**
  * Get account history endpoint
  * 
  * Retrieves the complete transaction history for an account.
@@ -507,6 +635,59 @@ app.post('/unfreeze', asyncHandler(async (req, res) => {
     });
 }));
 
+/**
+ * List roles
+ */
+app.get('/roles', asyncHandler(async (req, res) => {
+    const result = await fabricClient.listRoles();
+    res.json({
+        success: true,
+        data: result
+    });
+}));
+
+/**
+ * Add MSP to role
+ */
+app.post('/roles/add', asyncHandler(async (req, res) => {
+    const { role, mspId } = req.body;
+    const roleValidation = validateRole(role);
+    if (!roleValidation.valid) {
+        return res.status(400).json({ success: false, error: roleValidation.error });
+    }
+    const mspValidation = validateMsp(mspId);
+    if (!mspValidation.valid) {
+        return res.status(400).json({ success: false, error: mspValidation.error });
+    }
+    const result = await fabricClient.addRoleMember(role, mspId);
+    res.json({
+        success: true,
+        data: result,
+        message: `Added ${mspId} to role ${role}`
+    });
+}));
+
+/**
+ * Remove MSP from role
+ */
+app.post('/roles/remove', asyncHandler(async (req, res) => {
+    const { role, mspId } = req.body;
+    const roleValidation = validateRole(role);
+    if (!roleValidation.valid) {
+        return res.status(400).json({ success: false, error: roleValidation.error });
+    }
+    const mspValidation = validateMsp(mspId);
+    if (!mspValidation.valid) {
+        return res.status(400).json({ success: false, error: mspValidation.error });
+    }
+    const result = await fabricClient.removeRoleMember(role, mspId);
+    res.json({
+        success: true,
+        data: result,
+        message: `Removed ${mspId} from role ${role}`
+    });
+}));
+
 // ==================== Error Handling ====================
 
 /**
@@ -525,9 +706,19 @@ app.use((req, res) => {
             'POST /burn',
             'GET  /balance/:accountId',
             'GET  /totalsupply',
+            'GET  /metadata',
+            'GET  /status/paused',
+            'POST /pause',
+            'POST /unpause',
+            'POST /blocklist/add',
+            'POST /blocklist/remove',
+            'GET  /blocklist/:accountId',
             'GET  /history/:accountId',
             'POST /freeze',
-            'POST /unfreeze'
+            'POST /unfreeze',
+            'GET  /roles',
+            'POST /roles/add',
+            'POST /roles/remove'
         ]
     });
 });
@@ -618,9 +809,19 @@ async function startServer() {
             console.log(`  POST   /burn              - { accountId, amount }`);
             console.log(`  GET    /balance/:accountId`);
             console.log(`  GET    /totalsupply`);
+            console.log(`  GET    /metadata`);
+            console.log(`  GET    /status/paused`);
+            console.log(`  POST   /pause`);
+            console.log(`  POST   /unpause`);
+            console.log(`  POST   /blocklist/add     - { accountId }`);
+            console.log(`  POST   /blocklist/remove  - { accountId }`);
+            console.log(`  GET    /blocklist/:accountId`);
             console.log(`  GET    /history/:accountId`);
             console.log(`  POST   /freeze            - { accountId }`);
             console.log(`  POST   /unfreeze          - { accountId }`);
+            console.log(`  GET    /roles`);
+            console.log(`  POST   /roles/add         - { role, mspId }`);
+            console.log(`  POST   /roles/remove      - { role, mspId }`);
             console.log(`================================================\n`);
         });
     } catch (error) {

@@ -4,6 +4,23 @@
 // This provides the base Contract class and access to the transaction context
 const { Contract } = require('fabric-contract-api');
 
+// Basic token metadata and controls
+const TOKEN_METADATA = {
+    name: 'USDwpi',
+    symbol: 'USDWPI',
+    decimals: 6
+};
+const DECIMAL_FACTOR = 10 ** TOKEN_METADATA.decimals;
+// Set to a number to enforce a cap; null leaves it uncapped
+const MAX_SUPPLY = null;
+
+// Simple role mapping by MSP. All roles stay with Org1MSP for this project.
+const DEFAULT_ROLE_MAPPINGS = {
+    minter: ['Org1MSP'],
+    pauser: ['Org1MSP'],
+    blocklister: ['Org1MSP']
+};
+
 /**
  * StablecoinContract - Account-based stablecoin implementation for Hyperledger Fabric
  * 
@@ -119,22 +136,42 @@ class StablecoinContract extends Contract {
     }
 
     /**
-     * Check if the caller is an admin
-     * 
-     * For Phase 1, only members of Org1MSP are considered administrators.
-     * Administrators have permission to mint tokens and freeze/unfreeze accounts.
-     * 
-     * @param {Context} ctx - The transaction context provided by Fabric
-     * @returns {boolean} True if admin, throws error otherwise
-     * @throws {Error} If the caller is not an admin
+     * Retrieve role mappings from state (falls back to defaults)
+     */
+    async _getRoles(ctx) {
+        const key = ctx.stub.createCompositeKey('meta', ['roles']);
+        const roleBytes = await ctx.stub.getState(key);
+        if (!roleBytes || roleBytes.length === 0) {
+            return JSON.parse(JSON.stringify(DEFAULT_ROLE_MAPPINGS));
+        }
+        return JSON.parse(roleBytes.toString());
+    }
+
+    /**
+     * Persist role mappings
+     */
+    async _putRoles(ctx, roles) {
+        const key = ctx.stub.createCompositeKey('meta', ['roles']);
+        await ctx.stub.putState(key, Buffer.from(JSON.stringify(roles)));
+    }
+
+    /**
+     * Validate that the caller has a required role
+     */
+    async _requireRole(ctx, role) {
+        const roles = await this._getRoles(ctx);
+        const allowed = roles[role] || [];
+        const mspId = ctx.clientIdentity.getMSPID();
+        if (!allowed.includes(mspId)) {
+            throw new Error(`Operation requires role ${role}. Allowed MSPs: ${allowed.join(', ') || 'none'}, caller MSP: ${mspId}`);
+        }
+    }
+
+    /**
+     * Check if the caller is an admin (kept for freeze/unfreeze)
      */
     _isAdmin(ctx) {
-        // Get the MSP (Membership Service Provider) ID of the transaction submitter
-        // In Fabric, identity and access control are managed through MSPs
         const mspId = ctx.clientIdentity.getMSPID();
-        
-        // For Phase 1, only Org1MSP is considered admin
-        // In production, this could be enhanced with attribute-based access control (ABAC)
         if (mspId !== 'Org1MSP') {
             throw new Error(`Only admin (Org1MSP) can perform this operation. Current MSP: ${mspId}`);
         }
@@ -142,25 +179,71 @@ class StablecoinContract extends Contract {
     }
 
     /**
-     * Validate and parse amount
-     * 
-     * This helper ensures that amount parameters are valid positive numbers.
-     * It prevents negative amounts, zero amounts, and non-numeric inputs.
-     * 
-     * @param {string} amount - The amount string to validate
-     * @returns {number} The parsed amount as a number
-     * @throws {Error} If the amount is invalid
+     * Parse a decimal string into base units (integer) respecting TOKEN_METADATA.decimals
      */
-    _validateAmount(amount) {
-        // Convert string to number (handles both integer and decimal strings)
-        const parsedAmount = parseFloat(amount);
-        
-        // Check if parsing failed or if the amount is not positive
-        if (isNaN(parsedAmount) || parsedAmount <= 0) {
-            throw new Error(`Invalid amount: ${amount}. Amount must be a positive number.`);
+    _parseAmountToUnits(amount) {
+        if (amount === undefined || amount === null) {
+            throw new Error('Amount must be provided');
         }
-        
-        return parsedAmount;
+        const amountStr = amount.toString().trim();
+        if (!/^\d+(\.\d+)?$/.test(amountStr)) {
+            throw new Error(`Invalid amount: ${amount}. Use a positive number with up to ${TOKEN_METADATA.decimals} decimals.`);
+        }
+        const [whole, fraction = ''] = amountStr.split('.');
+        if (fraction.length > TOKEN_METADATA.decimals) {
+            throw new Error(`Too many decimal places. Max allowed: ${TOKEN_METADATA.decimals}`);
+        }
+        const paddedFraction = fraction.padEnd(TOKEN_METADATA.decimals, '0');
+        const units = Number(whole) * DECIMAL_FACTOR + Number(paddedFraction);
+        if (!Number.isFinite(units) || units <= 0) {
+            throw new Error(`Invalid amount after conversion: ${amount}`);
+        }
+        return units;
+    }
+
+    /**
+     * Pause flag helpers
+     */
+    async _getPauseFlag(ctx) {
+        const key = ctx.stub.createCompositeKey('meta', ['paused']);
+        const pausedBytes = await ctx.stub.getState(key);
+        if (!pausedBytes || pausedBytes.length === 0) {
+            return false;
+        }
+        return pausedBytes.toString() === 'true';
+    }
+
+    async _setPauseFlag(ctx, paused) {
+        const key = ctx.stub.createCompositeKey('meta', ['paused']);
+        await ctx.stub.putState(key, Buffer.from(paused ? 'true' : 'false'));
+    }
+
+    /**
+     * Blocklist helpers
+     */
+    async _getBlocklist(ctx) {
+        const key = ctx.stub.createCompositeKey('meta', ['blocklist']);
+        const blockBytes = await ctx.stub.getState(key);
+        if (!blockBytes || blockBytes.length === 0) {
+            return {};
+        }
+        return JSON.parse(blockBytes.toString());
+    }
+
+    async _putBlocklist(ctx, blocklist) {
+        const key = ctx.stub.createCompositeKey('meta', ['blocklist']);
+        await ctx.stub.putState(key, Buffer.from(JSON.stringify(blocklist)));
+    }
+
+    async _isBlocked(ctx, accountId) {
+        const blocklist = await this._getBlocklist(ctx);
+        return !!blocklist[accountId];
+    }
+
+    async _ensureNotBlocked(ctx, accountId) {
+        if (await this._isBlocked(ctx, accountId)) {
+            throw new Error(`Account ${accountId} is blocklisted`);
+        }
     }
 
     // ==================== Public Transaction Methods ====================
@@ -178,9 +261,11 @@ class StablecoinContract extends Contract {
     async InitLedger(ctx) {
         console.log('Initializing stablecoin ledger');
         
-        // Set initial total supply to 0
-        // All tokens must be explicitly minted by an admin
+        // Set initial total supply to 0 and clear controls
         await this._putTotalSupply(ctx, 0);
+        await this._setPauseFlag(ctx, false);
+        await this._putBlocklist(ctx, {});
+        await this._putRoles(ctx, DEFAULT_ROLE_MAPPINGS);
         
         return { message: 'Ledger initialized successfully' };
     }
@@ -211,19 +296,27 @@ class StablecoinContract extends Contract {
         }
         
         // Step 2: Check permissions
-        // Only admins can mint tokens (throws error if not admin)
-        this._isAdmin(ctx);
+        // Only minters can mint tokens (throws error if not allowed)
+        await this._requireRole(ctx, 'minter');
         
         // Step 3: Validate and parse the amount
-        // This ensures amount is a positive number
-        const mintAmount = this._validateAmount(amount);
+        // Convert to base units (integer, 6 decimals)
+        const mintAmount = this._parseAmountToUnits(amount);
 
         // Step 4: Retrieve current state from the ledger
         // Get the target account (creates new one if doesn't exist)
         const account = await this._getAccount(ctx, accountId);
         
+        // Ensure target is not blocklisted
+        await this._ensureNotBlocked(ctx, accountId);
+        
         // Get the current total supply
         const totalSupply = await this._getTotalSupply(ctx);
+
+        // Enforce supply cap if set
+        if (MAX_SUPPLY !== null && (totalSupply + mintAmount) > MAX_SUPPLY) {
+            throw new Error(`Mint would exceed max supply. Cap: ${MAX_SUPPLY}, current: ${totalSupply}, requested: ${mintAmount}`);
+        }
 
         // Step 5: Update balances
         // Add the minted amount to the account's existing balance
@@ -242,6 +335,12 @@ class StablecoinContract extends Contract {
 
         // Step 7: Log the operation for debugging/auditing
         console.log(`Minted ${mintAmount} to ${accountId}. New balance: ${account.balance}`);
+        ctx.stub.setEvent('Mint', Buffer.from(JSON.stringify({
+            accountId,
+            amount: mintAmount,
+            newBalance: account.balance,
+            newTotalSupply
+        })));
         
         // Step 8: Return transaction result
         // This result is returned to the client and recorded in the transaction
@@ -291,7 +390,12 @@ class StablecoinContract extends Contract {
         }
         
         // Step 2: Validate and parse the transfer amount
-        const transferAmount = this._validateAmount(amount);
+        const transferAmount = this._parseAmountToUnits(amount);
+
+        // Step 2a: Ensure transfers are not paused
+        if (await this._getPauseFlag(ctx)) {
+            throw new Error('Transfers are currently paused');
+        }
 
         // Step 3: Retrieve both accounts from the ledger
         // Load sender's account
@@ -299,6 +403,10 @@ class StablecoinContract extends Contract {
         
         // Load receiver's account (creates new account if doesn't exist)
         const toAccount = await this._getAccount(ctx, toAccountId);
+
+        // Blocklist checks
+        await this._ensureNotBlocked(ctx, fromAccountId);
+        await this._ensureNotBlocked(ctx, toAccountId);
 
         // Step 4: Check business rules
         // Verify sender account is not frozen (frozen accounts cannot send transfers)
@@ -332,6 +440,13 @@ class StablecoinContract extends Contract {
 
         // Step 8: Log the transaction for debugging/auditing
         console.log(`Transferred ${transferAmount} from ${fromAccountId} to ${toAccountId}`);
+        ctx.stub.setEvent('Transfer', Buffer.from(JSON.stringify({
+            from: fromAccountId,
+            to: toAccountId,
+            amount: transferAmount,
+            fromBalance: fromAccount.balance,
+            toBalance: toAccount.balance
+        })));
         
         // Step 9: Return transaction details
         // Note: Total supply is not changed during transfers
@@ -370,11 +485,14 @@ class StablecoinContract extends Contract {
         }
         
         // Step 2: Validate and parse the burn amount
-        const burnAmount = this._validateAmount(amount);
+        const burnAmount = this._parseAmountToUnits(amount);
 
         // Step 3: Retrieve current state from the ledger
         // Get the account to burn from
         const account = await this._getAccount(ctx, accountId);
+        
+        // Ensure not blocklisted
+        await this._ensureNotBlocked(ctx, accountId);
         
         // Get the current total supply
         const totalSupply = await this._getTotalSupply(ctx);
@@ -404,6 +522,12 @@ class StablecoinContract extends Contract {
 
         // Step 7: Log the operation for debugging/auditing
         console.log(`Burned ${burnAmount} from ${accountId}. New balance: ${account.balance}`);
+        ctx.stub.setEvent('Burn', Buffer.from(JSON.stringify({
+            accountId,
+            amount: burnAmount,
+            newBalance: account.balance,
+            newTotalSupply
+        })));
         
         // Step 8: Return transaction result
         return {
@@ -633,6 +757,132 @@ class StablecoinContract extends Contract {
             frozen: false,
             balance: account.balance
         };
+    }
+
+    /**
+     * Return token metadata
+     */
+    async Metadata(ctx) {
+        return {
+            name: TOKEN_METADATA.name,
+            symbol: TOKEN_METADATA.symbol,
+            decimals: TOKEN_METADATA.decimals,
+            maxSupply: MAX_SUPPLY
+        };
+    }
+
+    /**
+     * Pause transfers (pauser role)
+     */
+    async Pause(ctx) {
+        await this._requireRole(ctx, 'pauser');
+        await this._setPauseFlag(ctx, true);
+        ctx.stub.setEvent('Pause', Buffer.from(JSON.stringify({ paused: true })));
+        return { paused: true };
+    }
+
+    /**
+     * Unpause transfers (pauser role)
+     */
+    async Unpause(ctx) {
+        await this._requireRole(ctx, 'pauser');
+        await this._setPauseFlag(ctx, false);
+        ctx.stub.setEvent('Pause', Buffer.from(JSON.stringify({ paused: false })));
+        return { paused: false };
+    }
+
+    /**
+     * Check pause status
+     */
+    async IsPaused(ctx) {
+        const paused = await this._getPauseFlag(ctx);
+        return { paused };
+    }
+
+    /**
+     * Add an account to the blocklist (blocklister role)
+     */
+    async AddToBlocklist(ctx, accountId) {
+        if (!accountId || accountId.trim() === '') {
+            throw new Error('Account ID must be provided');
+        }
+        await this._requireRole(ctx, 'blocklister');
+        const blocklist = await this._getBlocklist(ctx);
+        blocklist[accountId] = true;
+        await this._putBlocklist(ctx, blocklist);
+        ctx.stub.setEvent('BlocklistUpdate', Buffer.from(JSON.stringify({ accountId, blocked: true })));
+        return { accountId, blocked: true };
+    }
+
+    /**
+     * Remove an account from the blocklist (blocklister role)
+     */
+    async RemoveFromBlocklist(ctx, accountId) {
+        if (!accountId || accountId.trim() === '') {
+            throw new Error('Account ID must be provided');
+        }
+        await this._requireRole(ctx, 'blocklister');
+        const blocklist = await this._getBlocklist(ctx);
+        delete blocklist[accountId];
+        await this._putBlocklist(ctx, blocklist);
+        ctx.stub.setEvent('BlocklistUpdate', Buffer.from(JSON.stringify({ accountId, blocked: false })));
+        return { accountId, blocked: false };
+    }
+
+    /**
+     * Check if an account is blocklisted
+     */
+    async IsBlocked(ctx, accountId) {
+        if (!accountId || accountId.trim() === '') {
+            throw new Error('Account ID must be provided');
+        }
+        const blocked = await this._isBlocked(ctx, accountId);
+        return { accountId, blocked };
+    }
+
+    /**
+     * Add an MSP to a role (admin only)
+     */
+    async AddRoleMember(ctx, role, mspId) {
+        if (!role || role.trim() === '' || !mspId || mspId.trim() === '') {
+            throw new Error('Role and MSP ID must be provided');
+        }
+        this._isAdmin(ctx);
+        const roles = await this._getRoles(ctx);
+        if (!roles[role]) {
+            roles[role] = [];
+        }
+        if (!roles[role].includes(mspId)) {
+            roles[role].push(mspId);
+            await this._putRoles(ctx, roles);
+        }
+        ctx.stub.setEvent('RoleUpdate', Buffer.from(JSON.stringify({ role, mspId, action: 'added' })));
+        return { role, members: roles[role] };
+    }
+
+    /**
+     * Remove an MSP from a role (admin only)
+     */
+    async RemoveRoleMember(ctx, role, mspId) {
+        if (!role || role.trim() === '' || !mspId || mspId.trim() === '') {
+            throw new Error('Role and MSP ID must be provided');
+        }
+        this._isAdmin(ctx);
+        const roles = await this._getRoles(ctx);
+        if (roles[role]) {
+            roles[role] = roles[role].filter(msp => msp !== mspId);
+            await this._putRoles(ctx, roles);
+        }
+        ctx.stub.setEvent('RoleUpdate', Buffer.from(JSON.stringify({ role, mspId, action: 'removed' })));
+        return { role, members: roles[role] || [] };
+    }
+
+    /**
+     * List roles and members
+     */
+    async ListRoles(ctx) {
+        const roles = await this._getRoles(ctx);
+        return roles;
     }
 }
 

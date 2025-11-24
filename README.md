@@ -163,7 +163,7 @@ number
 ### Chaincode Functions
 
 #### Mint(ctx, accountId, amount)
-- **Permission**: Admin only (Org1MSP)
+- **Permission**: Minter role (Org1MSP by default; configurable)
 - **Description**: Create new tokens and add to an account
 - **Increases**: Account balance, Total supply
 
@@ -201,6 +201,21 @@ number
 - **Permission**: Admin only (Org1MSP)
 - **Description**: Unfreeze a previously frozen account
 
+#### Pause(ctx) / Unpause(ctx)
+- **Permission**: Pauser role (Org1MSP by default; configurable)
+- **Description**: Toggle global pause for transfers
+
+#### AddToBlocklist(ctx, accountId) / RemoveFromBlocklist(ctx, accountId)
+- **Permission**: Blocklister role (Org1MSP by default; configurable)
+- **Description**: Manage blocklisted accounts
+
+#### Metadata(ctx)
+- **Permission**: Any user
+- **Description**: Return token name, symbol, decimals, maxSupply
+
+#### IsPaused(ctx), IsBlocked(ctx, accountId), ListRoles(ctx), AddRoleMember(ctx, role, mspId), RemoveRoleMember(ctx, role, mspId)
+- **Permission**: Read-only for status calls; Add/RemoveRole require admin
+
 ## REST API Endpoints
 
 | Method | Endpoint | Body | Description |
@@ -214,6 +229,16 @@ number
 | GET | `/history/:accountId` | - | Get account history |
 | POST | `/freeze` | `{ accountId }` | Freeze account |
 | POST | `/unfreeze` | `{ accountId }` | Unfreeze account |
+| POST | `/pause` | - | Pause transfers (pauser role) |
+| POST | `/unpause` | - | Unpause transfers (pauser role) |
+| GET  | `/status/paused` | - | Check pause status |
+| GET  | `/metadata` | - | Token metadata (name, symbol, decimals, cap) |
+| POST | `/blocklist/add` | `{ accountId }` | Blocklist an account (blocklister role) |
+| POST | `/blocklist/remove` | `{ accountId }` | Remove account from blocklist (blocklister role) |
+| GET  | `/blocklist/:accountId` | - | Check if account is blocklisted |
+| GET  | `/roles` | - | List roles and members |
+| POST | `/roles/add` | `{ role, mspId }` | Add MSP to a role (admin) |
+| POST | `/roles/remove` | `{ role, mspId }` | Remove MSP from a role (admin) |
 
 ### Response Format
 
@@ -234,6 +259,10 @@ number
   "error": "Error message"
 }
 ```
+
+### Amounts and Decimals
+- Token uses 6 decimals. Inputs like `"1.5"` mean 1.500000 tokens; on-chain balances are stored in base units (micro-units).
+- For scripts/clients, either send amounts as decimal strings (the API will forward them) or convert to base units consistently.
 
 ## Running Tests
 

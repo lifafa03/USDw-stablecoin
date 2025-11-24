@@ -36,7 +36,7 @@ class FabricClient {
         
         // Network configuration
         this.channelName = 'mychannel';           // Channel name (must match deployment)
-        this.chaincodeName = 'stablecoincc';      // Chaincode name (must match deployment)
+        this.chaincodeName = 'stablecoin';        // Chaincode name (must match deployment)
         this.orgName = 'Org1';                    // Organization name
         this.mspId = 'Org1MSP';                   // MSP identifier for Org1
         this.userId = 'appUser';                  // Application user identity
@@ -620,6 +620,83 @@ class FabricClient {
      */
     async getAccountHistory(accountId) {
         return await this.evaluateTransaction('GetAccountHistory', accountId);
+    }
+
+    /**
+     * Pause transfers
+     */
+    async pause() {
+        return await this.submitTransaction('Pause');
+    }
+
+    /**
+     * Unpause transfers
+     */
+    async unpause() {
+        return await this.submitTransaction('Unpause');
+    }
+
+    /**
+     * Check pause status
+     */
+    async isPaused() {
+        return await this.evaluateTransaction('IsPaused');
+    }
+
+    /**
+     * Get token metadata
+     */
+    async metadata() {
+        return await this.evaluateTransaction('Metadata');
+    }
+
+    /**
+     * Add account to blocklist
+     * @param {string} accountId
+     */
+    async addToBlocklist(accountId) {
+        return await this.submitTransaction('AddToBlocklist', accountId);
+    }
+
+    /**
+     * Remove account from blocklist
+     * @param {string} accountId
+     */
+    async removeFromBlocklist(accountId) {
+        return await this.submitTransaction('RemoveFromBlocklist', accountId);
+    }
+
+    /**
+     * Check if account is blocklisted
+     * @param {string} accountId
+     */
+    async isBlocked(accountId) {
+        return await this.evaluateTransaction('IsBlocked', accountId);
+    }
+
+    /**
+     * Add an MSP to a role
+     * @param {string} role
+     * @param {string} mspId
+     */
+    async addRoleMember(role, mspId) {
+        return await this.submitTransaction('AddRoleMember', role, mspId);
+    }
+
+    /**
+     * Remove an MSP from a role
+     * @param {string} role
+     * @param {string} mspId
+     */
+    async removeRoleMember(role, mspId) {
+        return await this.submitTransaction('RemoveRoleMember', role, mspId);
+    }
+
+    /**
+     * List roles and members
+     */
+    async listRoles() {
+        return await this.evaluateTransaction('ListRoles');
     }
 
     /**

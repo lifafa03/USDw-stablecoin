@@ -7,11 +7,11 @@ set -e
 
 # Configuration
 CHAINCODE_NAME="stablecoin"
-CHAINCODE_VERSION="1.0"
-CHAINCODE_SEQUENCE=1
+CHAINCODE_VERSION="1.1"
+CHAINCODE_SEQUENCE=2
 CHANNEL_NAME="mychannel"
 CC_RUNTIME_LANGUAGE="node"
-CC_SRC_PATH="../chaincode/stablecoin-js"
+CC_SRC_PATH="chaincode/stablecoin-js"
 
 # Colors for output
 GREEN='\033[0;32m'

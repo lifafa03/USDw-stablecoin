@@ -5,6 +5,8 @@ const FabricCAServices = require('fabric-ca-client');
 const path = require('path');
 const fs = require('fs');
 const { expect } = require('chai');
+const DECIMAL_FACTOR = 1_000_000;
+const toUnits = (amount) => Math.round(amount * DECIMAL_FACTOR);
 
 describe('Stablecoin Chaincode Tests', function() {
     this.timeout(60000);
@@ -189,13 +191,14 @@ describe('Stablecoin Chaincode Tests', function() {
     describe('Minting', function() {
         it('should mint tokens to account1', async function() {
             const mintAmount = 1000;
+            const mintUnits = toUnits(mintAmount);
             const result = await contract.submitTransaction('Mint', account1, mintAmount.toString());
             const data = JSON.parse(result.toString());
 
             expect(data).to.have.property('accountId', account1);
-            expect(data).to.have.property('amount', mintAmount);
-            expect(data).to.have.property('newBalance', mintAmount);
-            expect(data).to.have.property('newTotalSupply', mintAmount);
+            expect(data).to.have.property('amount', mintUnits);
+            expect(data).to.have.property('newBalance', mintUnits);
+            expect(data).to.have.property('newTotalSupply', mintUnits);
         });
 
         it('should update balance after minting', async function() {
@@ -206,17 +209,18 @@ describe('Stablecoin Chaincode Tests', function() {
 
         it('should mint tokens to account2', async function() {
             const mintAmount = 500;
+            const mintUnits = toUnits(mintAmount);
             const result = await contract.submitTransaction('Mint', account2, mintAmount.toString());
             const data = JSON.parse(result.toString());
 
             expect(data.accountId).to.equal(account2);
-            expect(data.amount).to.equal(mintAmount);
+            expect(data.amount).to.equal(mintUnits);
         });
 
         it('should update total supply after multiple mints', async function() {
             const result = await contract.evaluateTransaction('TotalSupply');
             const data = JSON.parse(result.toString());
-            expect(data.totalSupply).to.be.greaterThan(1000);
+            expect(data.totalSupply).to.be.greaterThan(toUnits(1000));
         });
 
         it('should fail to mint with invalid amount', async function() {
@@ -241,6 +245,7 @@ describe('Stablecoin Chaincode Tests', function() {
     describe('Transfers', function() {
         it('should transfer tokens from account1 to account3', async function() {
             const transferAmount = 200;
+            const transferUnits = toUnits(transferAmount);
             
             // Get initial balances
             const balance1Before = JSON.parse(
@@ -258,9 +263,9 @@ describe('Stablecoin Chaincode Tests', function() {
 
             expect(data.from).to.equal(account1);
             expect(data.to).to.equal(account3);
-            expect(data.amount).to.equal(transferAmount);
-            expect(data.fromBalance).to.equal(balance1Before - transferAmount);
-            expect(data.toBalance).to.equal(transferAmount);
+            expect(data.amount).to.equal(transferUnits);
+            expect(data.fromBalance).to.equal(balance1Before - transferUnits);
+            expect(data.toBalance).to.equal(transferUnits);
         });
 
         it('should reflect updated balances after transfer', async function() {
@@ -271,8 +276,8 @@ describe('Stablecoin Chaincode Tests', function() {
                 (await contract.evaluateTransaction('BalanceOf', account3)).toString()
             ).balance;
 
-            expect(balance1).to.equal(800); // 1000 - 200
-            expect(balance3).to.equal(200);
+            expect(balance1).to.equal(toUnits(800)); // 1000 - 200
+            expect(balance3).to.equal(toUnits(200));
         });
 
         it('should fail to transfer more than available balance', async function() {
@@ -320,6 +325,7 @@ describe('Stablecoin Chaincode Tests', function() {
     describe('Burning', function() {
         it('should burn tokens from account3', async function() {
             const burnAmount = 100;
+            const burnUnits = toUnits(burnAmount);
             
             const balance3Before = JSON.parse(
                 (await contract.evaluateTransaction('BalanceOf', account3)).toString()
@@ -333,9 +339,9 @@ describe('Stablecoin Chaincode Tests', function() {
             const data = JSON.parse(result.toString());
 
             expect(data.accountId).to.equal(account3);
-            expect(data.amount).to.equal(burnAmount);
-            expect(data.newBalance).to.equal(balance3Before - burnAmount);
-            expect(data.newTotalSupply).to.equal(totalSupplyBefore - burnAmount);
+            expect(data.amount).to.equal(burnUnits);
+            expect(data.newBalance).to.equal(balance3Before - burnUnits);
+            expect(data.newTotalSupply).to.equal(totalSupplyBefore - burnUnits);
         });
 
         it('should fail to burn more than available balance', async function() {
@@ -428,7 +434,67 @@ describe('Stablecoin Chaincode Tests', function() {
             const data = JSON.parse(result.toString());
 
             expect(data.from).to.equal(freezeAccount);
-            expect(data.amount).to.equal(100);
+            expect(data.amount).to.equal(toUnits(100));
+        });
+    });
+
+    describe('Pause Controls', function() {
+        it('should pause transfers and block new transfers', async function() {
+            await contract.submitTransaction('Pause');
+            const pauseStatus = JSON.parse((await contract.evaluateTransaction('IsPaused')).toString());
+            expect(pauseStatus.paused).to.be.true;
+
+            try {
+                await contract.submitTransaction('Transfer', account1, account2, '1');
+                expect.fail('Transfer should fail while paused');
+            } catch (error) {
+                expect(error.message).to.include('paused');
+            }
+
+            await contract.submitTransaction('Unpause');
+            const pauseStatusAfter = JSON.parse((await contract.evaluateTransaction('IsPaused')).toString());
+            expect(pauseStatusAfter.paused).to.be.false;
+        });
+    });
+
+    describe('Blocklist Controls', function() {
+        const blockedAccount = 'blocked';
+
+        before(async function() {
+            // Mint some funds to use in tests
+            await contract.submitTransaction('Mint', blockedAccount, '50');
+        });
+
+        it('should add and remove from blocklist', async function() {
+            await contract.submitTransaction('AddToBlocklist', blockedAccount);
+            const status = JSON.parse((await contract.evaluateTransaction('IsBlocked', blockedAccount)).toString());
+            expect(status.blocked).to.be.true;
+
+            try {
+                await contract.submitTransaction('Transfer', blockedAccount, account1, '1');
+                expect.fail('Transfer from blocklisted account should fail');
+            } catch (error) {
+                expect(error.message).to.include('blocklisted');
+            }
+
+            await contract.submitTransaction('RemoveFromBlocklist', blockedAccount);
+            const statusAfter = JSON.parse((await contract.evaluateTransaction('IsBlocked', blockedAccount)).toString());
+            expect(statusAfter.blocked).to.be.false;
+        });
+    });
+
+    describe('Role Management', function() {
+        it('should list roles and allow adding/removing members', async function() {
+            const rolesBefore = JSON.parse((await contract.evaluateTransaction('ListRoles')).toString());
+            expect(rolesBefore).to.have.property('minter');
+
+            await contract.submitTransaction('AddRoleMember', 'minter', 'Org2MSP');
+            const rolesAfterAdd = JSON.parse((await contract.evaluateTransaction('ListRoles')).toString());
+            expect(rolesAfterAdd.minter).to.include('Org2MSP');
+
+            await contract.submitTransaction('RemoveRoleMember', 'minter', 'Org2MSP');
+            const rolesAfterRemove = JSON.parse((await contract.evaluateTransaction('ListRoles')).toString());
+            expect(rolesAfterRemove.minter).to.not.include('Org2MSP');
         });
     });
 
@@ -438,6 +504,9 @@ describe('Stablecoin Chaincode Tests', function() {
             const mintAmount = 1000;
             const transferAmount = 300;
             const burnAmount = 200;
+            const mintUnits = toUnits(mintAmount);
+            const transferUnits = toUnits(transferAmount);
+            const burnUnits = toUnits(burnAmount);
 
             // Initial state
             const initialSupply = JSON.parse(
@@ -449,27 +518,27 @@ describe('Stablecoin Chaincode Tests', function() {
             let balance = JSON.parse(
                 (await contract.evaluateTransaction('BalanceOf', testAccount)).toString()
             ).balance;
-            expect(balance).to.equal(mintAmount);
+            expect(balance).to.equal(mintUnits);
 
             // Transfer
             await contract.submitTransaction('Transfer', testAccount, account1, transferAmount.toString());
             balance = JSON.parse(
                 (await contract.evaluateTransaction('BalanceOf', testAccount)).toString()
             ).balance;
-            expect(balance).to.equal(mintAmount - transferAmount);
+            expect(balance).to.equal(mintUnits - transferUnits);
 
             // Burn
             await contract.submitTransaction('Burn', testAccount, burnAmount.toString());
             balance = JSON.parse(
                 (await contract.evaluateTransaction('BalanceOf', testAccount)).toString()
             ).balance;
-            expect(balance).to.equal(mintAmount - transferAmount - burnAmount);
+            expect(balance).to.equal(mintUnits - transferUnits - burnUnits);
 
             // Verify total supply
             const finalSupply = JSON.parse(
                 (await contract.evaluateTransaction('TotalSupply')).toString()
             ).totalSupply;
-            expect(finalSupply).to.equal(initialSupply + mintAmount - burnAmount);
+            expect(finalSupply).to.equal(initialSupply + mintUnits - burnUnits);
         });
     });
 });
