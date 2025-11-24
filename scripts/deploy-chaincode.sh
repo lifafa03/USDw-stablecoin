@@ -11,7 +11,7 @@ CHAINCODE_VERSION="1.0"
 CHAINCODE_SEQUENCE=1
 CHANNEL_NAME="mychannel"
 CC_RUNTIME_LANGUAGE="node"
-CC_SRC_PATH="../chaincode/stablecoin-js"
+CC_SRC_PATH="../../chaincode/stablecoin-js"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -55,7 +55,7 @@ export FABRIC_CFG_PATH=$PWD/../config/
 # Package the chaincode
 echo -e "\n${BLUE}Step 1: Packaging chaincode...${NC}"
 peer lifecycle chaincode package ${CHAINCODE_NAME}.tar.gz \
-    --path ${PROJECT_ROOT}/${CC_SRC_PATH} \
+    --path /home/rsolipuram/stablecoin-fabric/chaincode/stablecoin-js \
     --lang ${CC_RUNTIME_LANGUAGE} \
     --label ${CHAINCODE_NAME}_${CHAINCODE_VERSION}
 

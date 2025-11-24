@@ -36,7 +36,7 @@ class FabricClient {
         
         // Network configuration
         this.channelName = 'mychannel';           // Channel name (must match deployment)
-        this.chaincodeName = 'stablecoincc';      // Chaincode name (must match deployment)
+        this.chaincodeName = 'stablecoin';        // Chaincode name (must match deployment)
         this.orgName = 'Org1';                    // Organization name
         this.mspId = 'Org1MSP';                   // MSP identifier for Org1
         this.userId = 'appUser';                  // Application user identity
@@ -326,11 +326,14 @@ class FabricClient {
             // Step 1: Initialize wallet
             await this.initWallet();
 
-            // Step 2: Ensure user identity exists
+            // Step 2: Check user identity exists (must be setup with setup-wallet.sh)
             const userIdentity = await this.wallet.get(this.userId);
             if (!userIdentity) {
-                console.log(`User '${this.userId}' not found in wallet. Registering...`);
-                await this.registerUser();
+                throw new Error(
+                    `User '${this.userId}' not found in wallet.\n` +
+                    `Please run the wallet setup script first:\n` +
+                    `  ./scripts/setup-wallet.sh`
+                );
             } else {
                 console.log(`✓ User '${this.userId}' found in wallet`);
             }
@@ -346,7 +349,7 @@ class FabricClient {
                 wallet: this.wallet,                    // Wallet containing identities
                 identity: this.userId,                  // Identity to use for transactions
                 discovery: {                            // Service discovery configuration
-                    enabled: true,                      // Enable service discovery
+                    enabled: false,                     // Disable service discovery for cryptogen
                     asLocalhost: true                   // Map discovered addresses to localhost
                                                         // (required for Docker networks)
                 }
