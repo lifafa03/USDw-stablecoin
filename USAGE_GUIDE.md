@@ -123,13 +123,67 @@ ls -la
 ```
 drwxr-xr-x  app/
 drwxr-xr-x  chaincode/
-drwxr-xr-x  fabric-samples/
 drwxr-xr-x  scripts/
 drwxr-xr-x  simulation/
 drwxr-xr-x  tests/
 -rw-r--r--  README.md
 -rw-r--r--  USAGE_GUIDE.md
 ...
+```
+
+**Note:** You won't see `fabric-samples/` yet - we'll install it in the next step.
+
+### Install Hyperledger Fabric Samples & Binaries
+
+```bash
+# Navigate to project root
+cd ~/stablecoin-fabric
+
+# Download Fabric samples, binaries, and Docker images (v2.5.0)
+curl -sSL https://bit.ly/2ysbOFE | bash -s -- 2.5.0 1.5.5
+
+# This will create a fabric-samples/ directory with:
+# - test-network/ (network setup scripts)
+# - bin/ (peer, orderer, configtxgen binaries)
+# - config/ (configuration files)
+# - Docker images (peer, orderer, CA, tools)
+```
+
+**What this does:**
+- Downloads Fabric binaries (`peer`, `orderer`, `configtxgen`, etc.)
+- Pulls Docker images (hyperledger/fabric-peer, fabric-orderer, fabric-ca)
+- Creates `fabric-samples/` directory with test network and examples
+- Takes 2-5 minutes depending on your internet speed
+
+**Expected output (abbreviated):**
+```
+Clone hyperledger/fabric-samples repo
+
+===> Downloading platform specific fabric binaries
+===> Downloading:  https://github.com/hyperledger/fabric/releases/download/v2.5.0/...
+
+===> Pulling fabric Images
+===> Pulling fabric-peer:2.5.0
+===> Pulling fabric-orderer:2.5.0
+===> Pulling fabric-ca:1.5.5
+...
+
+===> List out hyperledger docker images
+hyperledger/fabric-peer       2.5.0
+hyperledger/fabric-orderer    2.5.0
+hyperledger/fabric-ca         1.5.5
+```
+
+**Verify installation:**
+```bash
+# Check fabric-samples directory exists
+ls -la ~/stablecoin-fabric/fabric-samples/
+
+# Check binaries are installed
+ls -la ~/stablecoin-fabric/fabric-samples/bin/
+
+# Check Docker images
+docker images | grep hyperledger
 ```
 
 ### Install Node.js Dependencies
