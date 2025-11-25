@@ -8,7 +8,7 @@ set -e
 # Configuration
 CHAINCODE_NAME="stablecoin"
 CHAINCODE_VERSION="1.0"
-CHAINCODE_SEQUENCE=1
+CHAINCODE_SEQUENCE="${1:-1}"  # Use first argument or default to 1
 CHANNEL_NAME="mychannel"
 CC_RUNTIME_LANGUAGE="node"
 CC_SRC_PATH="../../chaincode/stablecoin-js"

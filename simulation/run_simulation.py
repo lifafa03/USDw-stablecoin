@@ -157,6 +157,9 @@ class CBDCSimulation:
             True if simulation completed successfully
         """
         try:
+            # Start metrics tracking
+            self.client.start_metrics()
+            
             # Step 0: Health check
             if not self._health_check():
                 return False
@@ -179,6 +182,9 @@ class CBDCSimulation:
             
             # Step 5: Print metrics and final state
             self._print_results()
+            
+            # Stop metrics tracking
+            self.client.stop_metrics()
             
             return True
             
@@ -523,6 +529,19 @@ Examples:
     )
     
     success = simulation.run()
+    
+    # Display client-level metrics from StablecoinClient
+    print("\n" + "=" * 80)
+    print("  CLIENT TRANSACTION METRICS")
+    print("=" * 80)
+    client_metrics = simulation.client.get_metrics()
+    print(f"  Total Transactions:       {client_metrics['total_transactions']}")
+    print(f"  Successful:               {client_metrics['successful_transactions']}")
+    print(f"  Failed:                   {client_metrics['failed_transactions']}")
+    print(f"  Success Rate:             {client_metrics['success_rate']}")
+    print(f"  Duration:                 {client_metrics['duration_seconds']}s")
+    print(f"  Throughput:               {client_metrics['transactions_per_second']} tx/s")
+    print("=" * 80 + "\n")
     
     # Exit with appropriate code
     sys.exit(0 if success else 1)

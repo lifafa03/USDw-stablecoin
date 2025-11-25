@@ -46,6 +46,65 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class TransactionMetrics:
+    """Data class to track transaction metrics"""
+    total_transactions: int = 0
+    successful_transactions: int = 0
+    failed_transactions: int = 0
+    start_time: float = 0
+    end_time: float = 0
+    
+    def record_success(self):
+        """Record a successful transaction"""
+        self.total_transactions += 1
+        self.successful_transactions += 1
+    
+    def record_failure(self):
+        """Record a failed transaction"""
+        self.total_transactions += 1
+        self.failed_transactions += 1
+    
+    def get_success_rate(self) -> float:
+        """Calculate success rate as percentage"""
+        if self.total_transactions == 0:
+            return 0.0
+        return (self.successful_transactions / self.total_transactions) * 100
+    
+    def get_duration(self) -> float:
+        """Calculate total duration in seconds"""
+        if self.start_time == 0:
+            return 0.0
+        end = self.end_time if self.end_time > 0 else time.time()
+        return end - self.start_time
+    
+    def get_transactions_per_second(self) -> float:
+        """Calculate average transactions per second"""
+        duration = self.get_duration()
+        if duration == 0:
+            return 0.0
+        return self.total_transactions / duration
+    
+    def start(self):
+        """Start the metrics timer"""
+        self.start_time = time.time()
+    
+    def stop(self):
+        """Stop the metrics timer"""
+        self.end_time = time.time()
+    
+    def get_summary(self) -> Dict[str, Any]:
+        """Get a summary of all metrics"""
+        return {
+            'total_transactions': self.total_transactions,
+            'successful_transactions': self.successful_transactions,
+            'failed_transactions': self.failed_transactions,
+            'success_rate': f"{self.get_success_rate():.2f}%",
+            'duration_seconds': f"{self.get_duration():.2f}",
+            'transactions_per_second': f"{self.get_transactions_per_second():.2f}"
+        }
+
+
+@dataclass
 class TransactionResult:
     """Data class to represent transaction results"""
     success: bool
@@ -82,6 +141,7 @@ class StablecoinClient:
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         })
+        self.metrics = TransactionMetrics()
         
         logger.info(f"Initialized StablecoinClient with base_url={self.base_url}")
     
@@ -119,6 +179,7 @@ class StablecoinClient:
             if response.status_code == 200:
                 result_data = response.json()
                 if result_data.get('success', True):
+                    self.metrics.record_success()
                     return TransactionResult(
                         success=True,
                         data=result_data.get('data', result_data),
@@ -127,6 +188,7 @@ class StablecoinClient:
                 else:
                     error_msg = result_data.get('error', 'Unknown error')
                     logger.error(f"API error: {error_msg}")
+                    self.metrics.record_failure()
                     return TransactionResult(
                         success=False,
                         error=error_msg,
@@ -135,6 +197,7 @@ class StablecoinClient:
             else:
                 error_msg = f"HTTP {response.status_code}: {response.text}"
                 logger.error(f"Request failed: {error_msg}")
+                self.metrics.record_failure()
                 return TransactionResult(
                     success=False,
                     error=error_msg,
@@ -145,18 +208,21 @@ class StablecoinClient:
             duration_ms = (time.time() - start_time) * 1000
             error_msg = f"Request timeout after {self.timeout}s"
             logger.error(error_msg)
+            self.metrics.record_failure()
             return TransactionResult(success=False, error=error_msg, duration_ms=duration_ms)
             
         except requests.exceptions.ConnectionError as e:
             duration_ms = (time.time() - start_time) * 1000
             error_msg = f"Connection error: {str(e)}"
             logger.error(error_msg)
+            self.metrics.record_failure()
             return TransactionResult(success=False, error=error_msg, duration_ms=duration_ms)
             
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
             error_msg = f"Unexpected error: {str(e)}"
             logger.error(error_msg)
+            self.metrics.record_failure()
             return TransactionResult(success=False, error=error_msg, duration_ms=duration_ms)
     
     def health_check(self) -> bool:
@@ -424,6 +490,30 @@ class StablecoinClient:
             
         return result
     
+    def get_metrics(self) -> Dict[str, Any]:
+        """
+        Get current transaction metrics
+        
+        Returns:
+            Dictionary containing metrics summary
+        """
+        return self.metrics.get_summary()
+    
+    def reset_metrics(self):
+        """Reset all transaction metrics to zero"""
+        self.metrics = TransactionMetrics()
+        logger.info("Metrics reset")
+    
+    def start_metrics(self):
+        """Start tracking metrics (starts the timer)"""
+        self.metrics.start()
+        logger.info("Metrics tracking started")
+    
+    def stop_metrics(self):
+        """Stop tracking metrics (stops the timer)"""
+        self.metrics.stop()
+        logger.info("Metrics tracking stopped")
+    
     def close(self):
         """Close the HTTP session and release resources"""
         self.session.close()
@@ -481,6 +571,7 @@ if __name__ == "__main__":
     
     # Health check
     print("\n1. Health Check:")
+    client.metrics.start()  # Start metrics tracking
     if client.health_check():
         print("   ✓ API server is running")
     else:
@@ -515,6 +606,20 @@ if __name__ == "__main__":
     
     print("\n" + "=" * 60)
     print("Test completed!")
+    print("=" * 60)
+    
+    # Display metrics
+    print("\n" + "=" * 60)
+    print("TRANSACTION METRICS")
+    print("=" * 60)
+    client.metrics.stop()
+    metrics_summary = client.metrics.get_summary()
+    print(f"Total Transactions: {metrics_summary['total_transactions']}")
+    print(f"Successful: {metrics_summary['successful_transactions']}")
+    print(f"Failed: {metrics_summary['failed_transactions']}")
+    print(f"Success Rate: {metrics_summary['success_rate']}")
+    print(f"Duration: {metrics_summary['duration_seconds']}s")
+    print(f"Throughput: {metrics_summary['transactions_per_second']} tx/s")
     print("=" * 60)
     
     # Clean up

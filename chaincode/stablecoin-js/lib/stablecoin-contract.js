@@ -144,20 +144,30 @@ class StablecoinContract extends Contract {
     /**
      * Validate and parse amount
      * 
-     * This helper ensures that amount parameters are valid positive numbers.
-     * It prevents negative amounts, zero amounts, and non-numeric inputs.
+     * This helper ensures that amount parameters are valid positive integers.
+     * It prevents negative amounts, zero amounts, decimals, and non-numeric inputs.
      * 
      * @param {string} amount - The amount string to validate
-     * @returns {number} The parsed amount as a number
+     * @returns {number} The parsed amount as an integer
      * @throws {Error} If the amount is invalid
      */
     _validateAmount(amount) {
-        // Convert string to number (handles both integer and decimal strings)
+        // Convert string to number
         const parsedAmount = parseFloat(amount);
         
         // Check if parsing failed or if the amount is not positive
         if (isNaN(parsedAmount) || parsedAmount <= 0) {
-            throw new Error(`Invalid amount: ${amount}. Amount must be a positive number.`);
+            throw new Error(`Invalid amount: ${amount}. Amount must be a positive integer.`);
+        }
+        
+        // Enforce integer amounts only (no decimals)
+        if (!Number.isInteger(parsedAmount)) {
+            throw new Error(`Invalid amount: ${amount}. Amount must be an integer (no decimals allowed).`);
+        }
+        
+        // Check for reasonable upper limit (prevent overflow)
+        if (parsedAmount > Number.MAX_SAFE_INTEGER) {
+            throw new Error(`Invalid amount: ${amount}. Amount exceeds maximum safe integer.`);
         }
         
         return parsedAmount;
@@ -241,7 +251,9 @@ class StablecoinContract extends Contract {
         await this._putTotalSupply(ctx, newTotalSupply);
 
         // Step 7: Log the operation for debugging/auditing
-        console.log(`Minted ${mintAmount} to ${accountId}. New balance: ${account.balance}`);
+        const txId = ctx.stub.getTxID();
+        const timestamp = ctx.stub.getTxTimestamp();
+        console.log(`[MINT] TxID: ${txId}, Admin: ${ctx.clientIdentity.getMSPID()}, Account: ${accountId}, Amount: ${mintAmount}, NewBalance: ${account.balance}, NewSupply: ${newTotalSupply}, Timestamp: ${timestamp}`);
         
         // Step 8: Return transaction result
         // This result is returned to the client and recorded in the transaction
@@ -331,7 +343,10 @@ class StablecoinContract extends Contract {
         await this._putAccount(ctx, toAccountId, toAccount);
 
         // Step 8: Log the transaction for debugging/auditing
-        console.log(`Transferred ${transferAmount} from ${fromAccountId} to ${toAccountId}`);
+        const txId = ctx.stub.getTxID();
+        const timestamp = ctx.stub.getTxTimestamp();
+        const caller = ctx.clientIdentity.getMSPID();
+        console.log(`[TRANSFER] TxID: ${txId}, Caller: ${caller}, From: ${fromAccountId}, To: ${toAccountId}, Amount: ${transferAmount}, FromBalance: ${fromAccount.balance}, ToBalance: ${toAccount.balance}, Timestamp: ${timestamp}`);
         
         // Step 9: Return transaction details
         // Note: Total supply is not changed during transfers
@@ -345,41 +360,45 @@ class StablecoinContract extends Contract {
     }
 
     /**
-     * Burn tokens from an account
+     * Burn tokens from an account (ADMIN ONLY)
      * 
      * Burning destroys tokens, permanently removing them from circulation.
      * This operation decreases both the account balance and the total supply.
-     * Any user can burn tokens from their own account (no admin restriction).
+     * Only administrators (Org1MSP) can burn tokens to maintain monetary policy control.
      * 
      * Use cases:
      * - Reducing money supply (deflationary policy)
      * - Redeeming tokens for underlying reserves
      * - Removing tokens from circulation
+     * - Regulatory compliance (seizing illicit funds)
      * 
      * @param {Context} ctx - The transaction context provided by Fabric
      * @param {string} accountId - The account from which to burn tokens
      * @param {string} amount - The number of tokens to burn (as string)
      * @returns {Promise<Object>} Transaction result with new balances
-     * @throws {Error} If inputs are invalid or insufficient balance
+     * @throws {Error} If caller is not admin, inputs are invalid, or insufficient balance
      */
     async Burn(ctx, accountId, amount) {
-        // Step 1: Validate inputs
+        // Step 1: Check permissions (ADMIN ONLY)
+        this._isAdmin(ctx);
+        
+        // Step 2: Validate inputs
         // Ensure account ID is provided
         if (!accountId || accountId.trim() === '') {
             throw new Error('Account ID must be provided');
         }
         
-        // Step 2: Validate and parse the burn amount
+        // Step 3: Validate and parse the burn amount
         const burnAmount = this._validateAmount(amount);
 
-        // Step 3: Retrieve current state from the ledger
+        // Step 4: Retrieve current state from the ledger
         // Get the account to burn from
         const account = await this._getAccount(ctx, accountId);
         
         // Get the current total supply
         const totalSupply = await this._getTotalSupply(ctx);
 
-        // Step 4: Verify sufficient balance
+        // Step 5: Verify sufficient balance
         // Cannot burn more tokens than the account holds
         if (account.balance < burnAmount) {
             throw new Error(
@@ -388,22 +407,24 @@ class StablecoinContract extends Contract {
             );
         }
 
-        // Step 5: Update balances
+        // Step 6: Update balances
         // Deduct the burned amount from the account
         account.balance -= burnAmount;
         
         // Decrease the total supply by the burned amount
         const newTotalSupply = totalSupply - burnAmount;
 
-        // Step 6: Persist the updated state to the ledger
+        // Step 7: Persist the updated state to the ledger
         // Save the updated account balance
         await this._putAccount(ctx, accountId, account);
         
         // Save the updated total supply
         await this._putTotalSupply(ctx, newTotalSupply);
 
-        // Step 7: Log the operation for debugging/auditing
-        console.log(`Burned ${burnAmount} from ${accountId}. New balance: ${account.balance}`);
+        // Step 8: Log the operation for debugging/auditing
+        const txId = ctx.stub.getTxID();
+        const timestamp = ctx.stub.getTxTimestamp();
+        console.log(`[BURN] TxID: ${txId}, Admin: ${ctx.clientIdentity.getMSPID()}, Account: ${accountId}, Amount: ${burnAmount}, NewBalance: ${account.balance}, NewSupply: ${newTotalSupply}, Timestamp: ${timestamp}`);
         
         // Step 8: Return transaction result
         return {

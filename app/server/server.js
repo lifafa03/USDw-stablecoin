@@ -104,9 +104,10 @@ const asyncHandler = (fn) => (req, res, next) => {
  * - Present
  * - A valid number
  * - Positive
+ * - An integer (no decimals)
  * 
  * @param {*} amount - Amount to validate
- * @returns {Object} Validation result {valid: boolean, error: string}
+ * @returns {Object} Validation result {valid: boolean, error: string, value: number}
  */
 const validateAmount = (amount) => {
     if (amount === undefined || amount === null || amount === '') {
@@ -121,6 +122,14 @@ const validateAmount = (amount) => {
     
     if (numAmount <= 0) {
         return { valid: false, error: 'Amount must be positive' };
+    }
+    
+    if (!Number.isInteger(numAmount)) {
+        return { valid: false, error: 'Amount must be an integer (no decimals allowed)' };
+    }
+    
+    if (numAmount > Number.MAX_SAFE_INTEGER) {
+        return { valid: false, error: 'Amount exceeds maximum safe integer' };
     }
     
     return { valid: true, value: numAmount };
@@ -153,6 +162,74 @@ const validateAccountId = (accountId) => {
     }
     
     return { valid: true };
+};
+
+/**
+ * Format error response
+ * 
+ * Creates a consistent error response format across all endpoints.
+ * 
+ * @param {string} error - Error message
+ * @param {Object} details - Optional additional error details
+ * @returns {Object} Formatted error response
+ */
+const formatError = (error, details = null) => {
+    const response = {
+        success: false,
+        error: error,
+        timestamp: new Date().toISOString()
+    };
+    
+    if (details) {
+        response.details = details;
+    }
+    
+    return response;
+};
+
+/**
+ * Format success response
+ * 
+ * Creates a consistent success response format.
+ * 
+ * @param {Object} data - Response data
+ * @param {string} message - Optional success message
+ * @returns {Object} Formatted success response
+ */
+const formatSuccess = (data, message = null) => {
+    const response = {
+        success: true,
+        data: data,
+        timestamp: new Date().toISOString()
+    };
+    
+    if (message) {
+        response.message = message;
+    }
+    
+    return response;
+};
+
+/**
+ * Log transaction details
+ * 
+ * Centralized transaction logging with consistent format.
+ * 
+ * @param {string} type - Transaction type (MINT, TRANSFER, BURN)
+ * @param {Object} details - Transaction details
+ * @param {boolean} success - Whether transaction succeeded
+ */
+const logTransaction = (type, details, success) => {
+    const timestamp = new Date().toISOString();
+    const status = success ? 'SUCCESS' : 'FAILED';
+    const log = {
+        timestamp,
+        type,
+        status,
+        ...details
+    };
+    
+    console.log(`[TX-${type}] ${JSON.stringify(log)}`);
 };
 
 // ==================== API Routes ====================
@@ -201,29 +278,33 @@ app.post('/mint', asyncHandler(async (req, res) => {
     // Validate account ID
     const accountValidation = validateAccountId(accountId);
     if (!accountValidation.valid) {
-        return res.status(400).json({
-            success: false,
-            error: accountValidation.error
-        });
+        logTransaction('MINT', { accountId, amount, error: accountValidation.error }, false);
+        return res.status(400).json(formatError(accountValidation.error));
     }
 
     // Validate amount
     const amountValidation = validateAmount(amount);
     if (!amountValidation.valid) {
-        return res.status(400).json({
-            success: false,
-            error: amountValidation.error
-        });
+        logTransaction('MINT', { accountId, amount, error: amountValidation.error }, false);
+        return res.status(400).json(formatError(amountValidation.error));
     }
 
-    // Submit mint transaction to chaincode
-    const result = await fabricClient.mint(accountId, amountValidation.value);
-    
-    res.json({
-        success: true,
-        data: result,
-        message: `Successfully minted ${amountValidation.value} tokens to ${accountId}`
-    });
+    try {
+        // Submit mint transaction to chaincode
+        const result = await fabricClient.mint(accountId, amountValidation.value);
+        
+        logTransaction('MINT', { 
+            accountId, 
+            amount: amountValidation.value, 
+            newBalance: result.newBalance,
+            newTotalSupply: result.newTotalSupply
+        }, true);
+        
+        res.json(formatSuccess(result, `Successfully minted ${amountValidation.value} tokens to ${accountId}`));
+    } catch (error) {
+        logTransaction('MINT', { accountId, amount: amountValidation.value, error: error.message }, false);
+        throw error;
+    }
 }));
 
 /**
@@ -251,46 +332,47 @@ app.post('/transfer', asyncHandler(async (req, res) => {
     // Validate sender account ID
     const fromValidation = validateAccountId(from);
     if (!fromValidation.valid) {
-        return res.status(400).json({
-            success: false,
-            error: `Invalid 'from' account: ${fromValidation.error}`
-        });
+        logTransaction('TRANSFER', { from, to, amount, error: `Invalid from: ${fromValidation.error}` }, false);
+        return res.status(400).json(formatError(`Invalid 'from' account: ${fromValidation.error}`));
     }
 
     // Validate receiver account ID
     const toValidation = validateAccountId(to);
     if (!toValidation.valid) {
-        return res.status(400).json({
-            success: false,
-            error: `Invalid 'to' account: ${toValidation.error}`
-        });
+        logTransaction('TRANSFER', { from, to, amount, error: `Invalid to: ${toValidation.error}` }, false);
+        return res.status(400).json(formatError(`Invalid 'to' account: ${toValidation.error}`));
     }
 
     // Check that from and to are different
     if (from === to) {
-        return res.status(400).json({
-            success: false,
-            error: 'Cannot transfer to the same account'
-        });
+        logTransaction('TRANSFER', { from, to, amount, error: 'Same account' }, false);
+        return res.status(400).json(formatError('Cannot transfer to the same account'));
     }
 
     // Validate amount
     const amountValidation = validateAmount(amount);
     if (!amountValidation.valid) {
-        return res.status(400).json({
-            success: false,
-            error: amountValidation.error
-        });
+        logTransaction('TRANSFER', { from, to, amount, error: amountValidation.error }, false);
+        return res.status(400).json(formatError(amountValidation.error));
     }
 
-    // Submit transfer transaction to chaincode
-    const result = await fabricClient.transfer(from, to, amountValidation.value);
-    
-    res.json({
-        success: true,
-        data: result,
-        message: `Successfully transferred ${amountValidation.value} tokens from ${from} to ${to}`
-    });
+    try {
+        // Submit transfer transaction to chaincode
+        const result = await fabricClient.transfer(from, to, amountValidation.value);
+        
+        logTransaction('TRANSFER', {
+            from,
+            to,
+            amount: amountValidation.value,
+            fromBalance: result.fromBalance,
+            toBalance: result.toBalance
+        }, true);
+        
+        res.json(formatSuccess(result, `Successfully transferred ${amountValidation.value} tokens from ${from} to ${to}`));
+    } catch (error) {
+        logTransaction('TRANSFER', { from, to, amount: amountValidation.value, error: error.message }, false);
+        throw error;
+    }
 }));
 
 /**
@@ -316,29 +398,33 @@ app.post('/burn', asyncHandler(async (req, res) => {
     // Validate account ID
     const accountValidation = validateAccountId(accountId);
     if (!accountValidation.valid) {
-        return res.status(400).json({
-            success: false,
-            error: accountValidation.error
-        });
+        logTransaction('BURN', { accountId, amount, error: accountValidation.error }, false);
+        return res.status(400).json(formatError(accountValidation.error));
     }
 
     // Validate amount
     const amountValidation = validateAmount(amount);
     if (!amountValidation.valid) {
-        return res.status(400).json({
-            success: false,
-            error: amountValidation.error
-        });
+        logTransaction('BURN', { accountId, amount, error: amountValidation.error }, false);
+        return res.status(400).json(formatError(amountValidation.error));
     }
 
-    // Submit burn transaction to chaincode
-    const result = await fabricClient.burn(accountId, amountValidation.value);
-    
-    res.json({
-        success: true,
-        data: result,
-        message: `Successfully burned ${amountValidation.value} tokens from ${accountId}`
-    });
+    try {
+        // Submit burn transaction to chaincode
+        const result = await fabricClient.burn(accountId, amountValidation.value);
+        
+        logTransaction('BURN', {
+            accountId,
+            amount: amountValidation.value,
+            newBalance: result.newBalance,
+            newTotalSupply: result.newTotalSupply
+        }, true);
+        
+        res.json(formatSuccess(result, `Successfully burned ${amountValidation.value} tokens from ${accountId}`));
+    } catch (error) {
+        logTransaction('BURN', { accountId, amount: amountValidation.value, error: error.message }, false);
+        throw error;
+    }
 }));
 
 /**
