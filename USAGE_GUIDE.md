@@ -9,67 +9,66 @@ This guide walks you through everything you need to know to run, use, and test t
 
 ## Table of Contents
 
-1. [Quick Start](#quick-start)
-2. [Starting the Blockchain Network](#starting-the-blockchain-network)
-3. [Deploying the Chaincode](#deploying-the-chaincode)
-4. [Starting the REST API](#starting-the-rest-api)
-5. [Using the System](#using-the-system)
-6. [Running Simulations](#running-simulations)
+1. [Prerequisites](#prerequisites)
+2. [Step 1: Start the Blockchain Network](#step-1-start-the-blockchain-network)
+3. [Step 2: Deploy the Chaincode](#step-2-deploy-the-chaincode)
+4. [Step 3: Start the REST API](#step-3-start-the-rest-api)
+5. [Step 4: Run Simulations](#step-4-run-simulations)
+6. [Using the System (Advanced)](#using-the-system-advanced)
 7. [Command Reference](#command-reference)
 8. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Quick Start
+## Prerequisites
 
-**TL;DR - Get everything running in 5 minutes:**
+Before you begin, ensure you have:
 
+- ✅ **Docker & Docker Compose** installed and running
+- ✅ **Node.js v16+** and npm installed
+- ✅ **Python 3.8+** installed (for simulations)
+- ✅ **Git** installed
+- ✅ **Hyperledger Fabric binaries** downloaded (in `fabric-samples/bin/`)
+
+**Check prerequisites:**
 ```bash
-# 1. Start Fabric network (2 orgs, 1 channel, 2 peers, 1 orderer)
-cd fabric-samples/test-network
-./network.sh up createChannel -c mychannel -ca
-
-# 2. Deploy stablecoin chaincode
-cd ../..
-/home/rsolipuram/stablecoin-fabric/scripts/deploy-chaincode.sh 1
-
-# 3. Create wallet identity
-cd app/server
-node ../../scripts/create-wallet-identity.js
-
-# 4. Start REST API
-node server.js
-
-# 5. Test it (in new terminal)
-curl http://localhost:3000/health
+docker --version          # Should show Docker version 20.10+
+docker-compose --version  # Should show docker-compose version 1.29+
+node --version           # Should show v16.0.0 or higher
+npm --version            # Should show 8.0.0 or higher
+python3 --version        # Should show Python 3.8.0 or higher
 ```
+
+**If you need to install prerequisites, see:** `PREREQUISITES.md`
 
 ---
 
-## Starting the Blockchain Network
+## Step 1: Start the Blockchain Network
 
-### What is the Blockchain Network?
+### What You're Starting
 
 The blockchain network consists of:
-- **2 Organizations** (Org1, Org2) - represent different entities (e.g., banks)
-- **2 Peers** (peer0.org1, peer0.org2) - nodes that store the blockchain ledger
-- **1 Orderer** - sequences transactions and creates blocks
-- **1 Channel** (mychannel) - private communication pathway for transactions
+- **2 Organizations** (Org1, Org2) - Different entities like banks
+- **2 Peers** (peer0.org1, peer0.org2) - Store the blockchain ledger
+- **1 Orderer** - Sequences transactions into blocks
+- **1 Channel** (mychannel) - Private communication pathway
 
-### Command: Start Network
+### Command
 
 ```bash
 cd fabric-samples/test-network
 ./network.sh up createChannel -c mychannel -ca
 ```
 
-**What this does:**
-- `./network.sh up` - Starts Docker containers for peers, orderer, and CAs
-- `createChannel` - Creates a channel named "mychannel"
-- `-c mychannel` - Specifies the channel name
-- `-ca` - Starts Certificate Authorities for identity management
+### What This Does
 
-**Expected Output:**
+1. **Starts Docker containers** for peers, orderer, and certificate authorities
+2. **Creates cryptographic materials** (certificates, keys) for identities
+3. **Creates channel** named "mychannel"
+4. **Joins peers** to the channel
+
+### Expected Output
+
 ```
 Creating network "fabric_test" with the default driver
 Creating volume "net_orderer.example.com" with default driver
@@ -77,64 +76,60 @@ Creating volume "net_peer0.org1.example.com" with default driver
 Creating volume "net_peer0.org2.example.com" with default driver
 ...
 Channel 'mychannel' created
+Peer peer0.org1.example.com joined the channel 'mychannel'
+Peer peer0.org2.example.com joined the channel 'mychannel'
 ```
 
-**Verify it's running:**
+### Verify It's Running
+
 ```bash
 docker ps
 ```
 
-You should see containers running:
+**You should see 5 containers running:**
 - `orderer.example.com`
 - `peer0.org1.example.com`
 - `peer0.org2.example.com`
 - `ca_org1`
 - `ca_org2`
 
-### Command: Stop Network
+**✅ SUCCESS:** If you see all 5 containers with status "Up", proceed to Step 2.
 
-```bash
-cd fabric-samples/test-network
-./network.sh down
-```
-
-**What this does:**
-- Stops all Docker containers
-- Removes volumes (deletes all blockchain data)
-- Cleans up the network
-
-**⚠️ WARNING:** This deletes all your blockchain data! All token balances will be lost.
+**❌ ERROR:** If containers aren't running, see [Troubleshooting](#troubleshooting).
 
 ---
 
-## Deploying the Chaincode
+## Step 2: Deploy the Chaincode
 
-### What is Chaincode?
+### What You're Deploying
 
-Chaincode is the **smart contract** that runs on the blockchain. It contains all the business logic for:
-- Minting tokens (creating new tokens)
-- Transferring tokens (moving tokens between accounts)
-- Burning tokens (destroying tokens)
-- Querying balances
-- Freezing/unfreezing accounts
+**Chaincode** is the smart contract that runs on the blockchain. It contains:
+- **Mint** - Create new tokens (admin only)
+- **Transfer** - Move tokens between accounts
+- **Burn** - Destroy tokens (admin only)
+- **BalanceOf** - Query account balance
+- **TotalSupply** - Query total tokens in circulation
+- **FreezeAccount** / **UnfreezeAccount** - Admin controls
 
-### Command: Deploy Chaincode (First Time)
+### Command (Automated)
 
 ```bash
 cd /home/rsolipuram/stablecoin-fabric
 ./scripts/deploy-chaincode.sh 1
 ```
 
-**What this does:**
-1. **Packages** the chaincode into a `.tar.gz` file
-2. **Installs** it on peer0.org1 and peer0.org2
-3. **Approves** it for both organizations
-4. **Commits** it to the channel (makes it active)
+**Note:** The `1` is the sequence number. Use `1` for first deployment, `2` for first upgrade, etc.
 
-**Parameters:**
-- `1` - The sequence number (version). Use `1` for first deployment, `2` for first upgrade, `3` for second upgrade, etc.
+### What This Does
 
-**Expected Output:**
+1. **Packages** the chaincode (creates `.tar.gz` file)
+2. **Installs** on peer0.org1 and peer0.org2
+3. **Approves** for both organizations
+4. **Commits** to mychannel (makes it active)
+5. **Starts chaincode containers**
+
+### Expected Output
+
 ```
 ================================================
   Stablecoin Chaincode Deployment Script
@@ -151,6 +146,7 @@ Step 3: Installing chaincode on Org2...
 ✓ Chaincode installed on Org2
 
 Step 4: Querying installed chaincode...
+Package ID: stablecoin_1.0:c646068d89152b2e...
 ✓ Package ID retrieved
 
 Step 5: Approving chaincode for Org1...
@@ -164,24 +160,362 @@ Step 7: Committing chaincode to channel...
 
 Step 8: Verifying deployment...
 ✓ Chaincode is ready to use!
+
+================================================
+Deployment completed successfully!
+================================================
 ```
 
-### Command: Upgrade Chaincode
-
-If you made changes to the chaincode and want to deploy the new version:
+### Verify Deployment
 
 ```bash
-./scripts/deploy-chaincode.sh 2  # Use next sequence number
+docker ps | grep stablecoin
 ```
 
-**Why sequence numbers?**
-- Fabric tracks versions using sequence numbers
-- You must increment the sequence for each upgrade
-- Current production version is sequence 3
+**You should see 2 new chaincode containers:**
+- `dev-peer0.org1.example.com-stablecoin_1.0-...`
+- `dev-peer0.org2.example.com-stablecoin_1.0-...`
 
-### Manual Deployment (Advanced)
+**✅ SUCCESS:** If you see chaincode containers running, proceed to Step 3.
 
-If the script fails, you can deploy manually:
+**❌ ERROR:** If deployment failed, see [Manual Deployment](#manual-chaincode-deployment-advanced).
+
+---
+
+## Step 3: Start the REST API
+
+### What You're Starting
+
+The **REST API** is a web server that provides HTTP endpoints to interact with the blockchain:
+- No need to use complex Fabric commands
+- Simple HTTP requests (curl, Postman, or any programming language)
+- Runs on port 3000
+
+### Step 3a: Create Wallet Identity
+
+Before starting the API, create an identity:
+
+```bash
+cd app/server
+node ../../scripts/create-wallet-identity.js
+```
+
+**What this does:** Creates a wallet with `appUser` identity enrolled from Org1.
+
+**Expected output:**
+```
+Wallet path: /home/rsolipuram/stablecoin-fabric/app/server/wallet
+Successfully enrolled app user "appUser" and imported it into the wallet
+```
+
+### Step 3b: Start the Server
+
+```bash
+node server.js
+```
+
+**Expected output:**
+```
+Initializing Fabric connection...
+✓ Wallet initialized at: /home/rsolipuram/stablecoin-fabric/app/server/wallet
+✓ User 'appUser' found in wallet
+✓ Successfully connected to Fabric network
+  Channel: mychannel
+  Chaincode: stablecoin
+  Identity: appUser (Org1MSP)
+
+================================================
+  Stablecoin REST API Server
+================================================
+Server running on port 3000
+
+Available endpoints:
+  GET    /health
+  POST   /mint              - { accountId, amount }
+  POST   /transfer          - { from, to, amount }
+  POST   /burn              - { accountId, amount }
+  GET    /balance/:accountId
+  GET    /totalsupply
+  GET    /history/:accountId
+  POST   /freeze            - { accountId }
+  POST   /unfreeze          - { accountId }
+================================================
+```
+
+### Verify API is Running
+
+Open a **new terminal** and test:
+
+```bash
+curl http://localhost:3000/health
+```
+
+**Expected response:**
+```json
+{
+  "status": "healthy",
+  "message": "Stablecoin API is running",
+  "timestamp": "2025-11-25T20:00:00.000Z"
+}
+```
+
+**✅ SUCCESS:** If you get a healthy response, proceed to Step 4.
+
+**❌ ERROR:** If connection fails, ensure network and chaincode are running.
+
+### Optional: Run in Background
+
+To keep the server running after closing terminal:
+
+```bash
+node server.js > /tmp/server.log 2>&1 &
+```
+
+**View logs:** `tail -f /tmp/server.log`  
+**Stop server:** `pkill -f "node.*server.js"`
+
+---
+
+## Step 4: Run Simulations
+
+Now that everything is running, let's test it!
+
+### Option A: Quick Demo (2 minutes)
+
+**Test basic operations:**
+
+```bash
+cd /home/rsolipuram/stablecoin-fabric/simulation
+python3 demo.py
+```
+
+**What this does:**
+1. Mints 100,000 tokens to `demo_account`
+2. Transfers 10,000 tokens to `demo_account_2`
+3. Queries both balances
+4. Burns 5,000 tokens from `demo_account`
+5. Queries final total supply
+
+**Expected output:**
+```
+================================================
+  Stablecoin Demo - Quick Test
+================================================
+
+Step 1: Mint 100,000 tokens to demo_account
+✓ Minted successfully
+  New Balance: 100,000
+  New Total Supply: 100,000
+
+Step 2: Transfer 10,000 tokens
+✓ Transfer successful
+  From balance: 90,000
+  To balance: 10,000
+
+Step 3: Query balances
+demo_account balance: 90,000
+demo_account_2 balance: 10,000
+
+Step 4: Burn 5,000 tokens
+✓ Burn successful
+  New balance: 85,000
+  New total supply: 95,000
+
+Step 5: Query total supply
+Total Supply: 95,000
+
+================================================
+Demo completed successfully!
+================================================
+```
+
+**✅ SUCCESS:** If all steps complete, your system is fully operational!
+
+---
+
+### Option B: Full CBDC Simulation (5-10 minutes)
+
+**Simulate a real Central Bank Digital Currency system:**
+
+```bash
+python3 run_simulation.py
+```
+
+**What this simulates:**
+
+**Phase 1 - Initialize Central Bank:**
+```
+[Phase 1] Initialize Central Bank
+----------------------------------------
+Minting 10,000,000 tokens to bank_central
+✓ Central bank initialized with 10,000,000 tokens
+```
+
+**Phase 2 - Distribute to Commercial Banks:**
+```
+[Phase 2] Distribute to Commercial Banks
+----------------------------------------
+Transferring 2,000,000 tokens to bank_a
+Transferring 2,000,000 tokens to bank_b
+✓ Distributed 4,000,000 tokens to commercial banks
+```
+
+**Phase 3 - Distribute to Retail Users:**
+```
+[Phase 3] Distribute to Retail Users
+----------------------------------------
+Transferring 10,000 tokens to user_0
+Transferring 10,000 tokens to user_1
+...
+✓ Distributed 100,000 tokens to 10 retail users
+```
+
+**Phase 4 - Retail Payment Simulation:**
+```
+[Phase 4] Retail Payment Simulation
+----------------------------------------
+Transaction 1/100: user_3 → user_7 (500 tokens) ✓
+Transaction 2/100: user_1 → bank_a (250 tokens) ✓
+Transaction 3/100: user_5 → user_2 (1000 tokens) ✓
+...
+✓ Completed 100/100 transactions (95.0% success rate)
+```
+
+**Phase 5 - Final Reconciliation:**
+```
+[Phase 5] Final Reconciliation
+----------------------------------------
+Central Bank Balance:        5,900,000
+Bank A Balance:              2,000,250
+Bank B Balance:              2,000,000
+Retail User Total:              99,750
+Total Supply:               10,000,000 ✓
+
+✓ Conservation verified: All tokens accounted for!
+```
+
+**Metrics:**
+```
+================================================================================
+  SIMULATION METRICS
+================================================================================
+  Total Transactions:       115
+  Successful:               109
+  Failed:                   6
+  Success Rate:             94.78%
+  Duration:                 45.23s
+  Throughput:               2.54 tx/s
+================================================================================
+
+  CLIENT TRANSACTION METRICS
+================================================================================
+  Total Transactions:       115
+  Successful:               109
+  Failed:                   6
+  Success Rate:             94.78%
+  Duration:                 45.23s
+  Throughput:               2.54 tx/s
+================================================================================
+```
+
+---
+
+### Option C: Custom Simulation
+
+**Customize the simulation parameters:**
+
+```bash
+# More users and transactions
+python3 run_simulation.py --num-users 50 --num-transactions 500
+
+# Smaller test (faster)
+python3 run_simulation.py --num-users 5 --num-transactions 20
+
+# Different initial supply
+python3 run_simulation.py --initial-supply 1000000
+
+# Verbose logging (see every detail)
+python3 run_simulation.py --verbose
+
+# Combine parameters
+python3 run_simulation.py --num-users 20 --num-transactions 200 --verbose
+```
+
+**Available parameters:**
+- `--num-users N` - Number of retail user accounts (default: 10)
+- `--num-transactions N` - Number of payment transactions (default: 100)
+- `--initial-supply N` - Initial tokens to mint (default: 10,000,000)
+- `--verbose` - Show detailed logging for every operation
+- `--api-url URL` - Custom REST API URL (default: http://localhost:3000)
+
+---
+
+### Understanding Simulation Results
+
+**Transaction Types:**
+
+1. **Wholesale CBDC** (Central Bank → Commercial Banks)
+   - Large amounts (millions of tokens)
+   - Represents reserve distribution
+   - Example: Central bank gives 2M tokens to Bank A
+
+2. **Retail CBDC** (Users ↔ Users, Users ↔ Banks)
+   - Small amounts (100-1000 tokens)
+   - Represents everyday payments
+   - Example: User pays 500 tokens to merchant
+
+**Why Some Transactions Fail:**
+
+- **Insufficient balance** - User tries to spend more than they have
+- **Account frozen** - Admin froze the account
+- **Invalid amount** - Decimal amounts are rejected (integers only)
+- **Concurrent updates** - Two transactions try to update same account simultaneously
+
+**This is normal!** A 90-95% success rate is expected in real-world scenarios.
+
+**Conservation Check:**
+
+At the end, the simulation verifies:
+```
+SUM(all balances) == Total Supply
+```
+
+This ensures no tokens were created or lost during transfers.
+
+---
+
+## Quick Start Summary
+
+**Complete setup in 5 commands:**
+
+```bash
+# 1. Start blockchain network
+cd fabric-samples/test-network && ./network.sh up createChannel -c mychannel -ca
+
+# 2. Deploy chaincode
+cd ../.. && ./scripts/deploy-chaincode.sh 1
+
+# 3. Create wallet
+cd app/server && node ../../scripts/create-wallet-identity.js
+
+# 4. Start REST API (in background)
+node server.js > /tmp/server.log 2>&1 &
+
+# 5. Run simulation
+cd ../../simulation && python3 run_simulation.py
+```
+
+**That's it!** Your USDw stablecoin is now running on Hyperledger Fabric. 🚀
+
+---
+
+## Using the System (Advanced)
+
+This section covers manual interaction methods for advanced users.
+
+### Manual Chaincode Deployment (Advanced)
+
+If the automated script fails, you can deploy manually:
 
 ```bash
 cd fabric-samples/test-network
@@ -238,123 +572,9 @@ peer lifecycle chaincode commit \
 
 ---
 
-## Starting the REST API
+### Method 1: REST API Operations
 
-### What is the REST API?
-
-The REST API is a web server that provides HTTP endpoints to interact with the blockchain. Instead of using complex Fabric commands, you can use simple HTTP requests.
-
-### Command: Create Wallet Identity
-
-Before starting the API, you need to create a wallet with an identity:
-
-```bash
-cd app/server
-node ../../scripts/create-wallet-identity.js
-```
-
-**What this does:**
-- Creates a `wallet/` directory
-- Enrolls an identity called `appUser` from Org1
-- Stores the certificates and private keys needed to submit transactions
-
-**Expected Output:**
-```
-Wallet path: /home/rsolipuram/stablecoin-fabric/app/server/wallet
-Successfully enrolled app user "appUser" and imported it into the wallet
-```
-
-### Command: Start REST API
-
-```bash
-cd app/server
-node server.js
-```
-
-**What this does:**
-- Loads the connection profile (`connection-org1.json`)
-- Connects to the Fabric network using the `appUser` identity
-- Starts an Express.js web server on port 3000
-- Exposes REST endpoints for mint, transfer, burn, etc.
-
-**Expected Output:**
-```
-Initializing Fabric connection...
-✓ Wallet initialized at: /home/rsolipuram/stablecoin-fabric/app/server/wallet
-✓ User 'appUser' found in wallet
-✓ Successfully connected to Fabric network
-  Channel: mychannel
-  Chaincode: stablecoin
-  Identity: appUser (Org1MSP)
-
-================================================
-  Stablecoin REST API Server
-================================================
-Server running on port 3000
-
-Available endpoints:
-  GET    /health
-  POST   /mint              - { accountId, amount }
-  POST   /transfer          - { from, to, amount }
-  POST   /burn              - { accountId, amount }
-  GET    /balance/:accountId
-  GET    /totalsupply
-  GET    /history/:accountId
-  POST   /freeze            - { accountId }
-  POST   /unfreeze          - { accountId }
-================================================
-```
-
-### Command: Start in Background
-
-To keep the server running even after closing the terminal:
-
-```bash
-cd app/server
-node server.js > /tmp/server.log 2>&1 &
-```
-
-**What this does:**
-- `> /tmp/server.log 2>&1` - Redirects output to log file
-- `&` - Runs the process in the background
-
-**Check if it's running:**
-```bash
-pgrep -af "node.*server.js"
-```
-
-**View logs:**
-```bash
-tail -f /tmp/server.log
-```
-
-**Stop background server:**
-```bash
-pkill -f "node.*server.js"
-```
-
----
-
-## Using the System
-
-### Method 1: REST API (Recommended)
-
-The easiest way to interact with the stablecoin.
-
-#### Check Server Health
-
-```bash
-curl http://localhost:3000/health
-```
-
-**Response:**
-```json
-{
-  "status": "healthy",
-  "message": "Stablecoin API is running",
-  "timestamp": "2025-11-25T20:00:00.000Z"
-}
-```
+Use these endpoints to manually interact with the stablecoin via HTTP requests.
 
 #### Mint Tokens
 
@@ -608,154 +828,6 @@ peer chaincode query \
 **Query vs Invoke:**
 - **Query** - Read-only, doesn't create transactions, faster
 - **Invoke** - Writes to ledger, creates transactions, requires endorsement
-
----
-
-## Running Simulations
-
-### What is the Simulation?
-
-The Python simulation mimics a **Central Bank Digital Currency (CBDC)** system:
-
-1. **Central Bank** mints tokens
-2. **Commercial Banks** (bank_a, bank_b) receive reserves
-3. **Retail Users** make payments
-4. **Metrics** track performance (transactions/second, success rate, latency)
-
-### Setup Python Environment
-
-```bash
-cd simulation
-pip3 install requests
-```
-
-### Quick Test
-
-```bash
-python3 demo.py
-```
-
-**What this does:**
-- Mints 100,000 tokens to demo_account
-- Transfers 10,000 tokens to demo_account_2
-- Queries balances
-- Burns 5,000 tokens
-
-### Full CBDC Simulation
-
-```bash
-python3 run_simulation.py
-```
-
-**Default parameters:**
-- 10 retail users
-- 100 random payment transactions
-- 10,000,000 initial supply
-
-**What this does:**
-
-**Phase 1 - Initialize Central Bank:**
-```
-Minting 10,000,000 tokens to bank_central
-✓ Central bank initialized with 10,000,000 tokens
-```
-
-**Phase 2 - Distribute to Commercial Banks:**
-```
-Transferring 2,000,000 tokens to bank_a
-Transferring 2,000,000 tokens to bank_b
-✓ Distributed 4,000,000 tokens to commercial banks
-```
-
-**Phase 3 - Distribute to Retail Users:**
-```
-Transferring 10,000 tokens to user_0
-Transferring 10,000 tokens to user_1
-...
-✓ Distributed 100,000 tokens to 10 retail users
-```
-
-**Phase 4 - Retail Payments:**
-```
-Transfer: user_3 → user_7 (500 tokens)
-Transfer: user_1 → bank_a (250 tokens)
-...
-✓ Completed 100/100 transactions (95.0% success rate)
-```
-
-**Phase 5 - Final Reconciliation:**
-```
-Central Bank Balance: 5,900,000
-Bank A Balance: 2,000,250
-Bank B Balance: 2,000,000
-Retail User Balances: 99,750
-Total Supply: 10,000,000 ✓ Conservation verified
-```
-
-**Metrics:**
-```
-Total Transactions:       115
-Successful:               109
-Failed:                   6
-Success Rate:             94.78%
-Duration:                 45.23s
-Throughput:               2.54 tx/s
-```
-
-### Custom Simulation Parameters
-
-```bash
-# More users and transactions
-python3 run_simulation.py --num-users 50 --num-transactions 500
-
-# Smaller test
-python3 run_simulation.py --num-users 5 --num-transactions 20
-
-# Different initial supply
-python3 run_simulation.py --initial-supply 1000000
-
-# Verbose logging
-python3 run_simulation.py --verbose
-```
-
-**Parameters:**
-- `--num-users` - Number of retail user accounts
-- `--num-transactions` - Number of payment transactions
-- `--initial-supply` - Initial token supply to mint
-- `--verbose` - Show detailed logging
-- `--api-url` - Custom REST API URL (default: http://localhost:3000)
-
-### Understanding Simulation Output
-
-**Transaction Types:**
-
-1. **Wholesale CBDC** (Central Bank → Commercial Banks)
-   - Large amounts (millions)
-   - Infrequent
-   - Represents reserve distribution
-
-2. **Retail CBDC** (Users ↔ Users, Users ↔ Banks)
-   - Small amounts (100-1000)
-   - Frequent
-   - Represents everyday payments
-
-**Metrics Explained:**
-
-- **Total Transactions** - All operations (mint + transfers + burns)
-- **Successful** - Transactions that completed without errors
-- **Failed** - Transactions that were rejected (insufficient balance, frozen account, etc.)
-- **Success Rate** - Percentage of successful transactions
-- **Duration** - Total time to run simulation
-- **Throughput** - Transactions per second (tx/s)
-
-**Conservation Check:**
-
-At the end, the simulation verifies:
-```
-SUM(all account balances) == Total Supply
-```
-
-This ensures no tokens were created or lost during transfers.
 
 ---
 
