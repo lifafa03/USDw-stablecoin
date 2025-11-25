@@ -1,22 +1,24 @@
 # USDw Stablecoin - Complete Usage Guide
 
 **Last Updated:** November 25, 2025  
-**Version:** 1.0 (Chaincode Sequence 3)
+**Version:** 1.0 (Chaincode Sequence 3)  
+**Platform:** Linux Server (Ubuntu/Debian)
 
-This guide walks you through everything you need to know to run, use, and test the USDw stablecoin on Hyperledger Fabric.
+This guide walks you through everything you need to know to run, use, and test the USDw stablecoin on Hyperledger Fabric on a Linux server.
 
 ---
 
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Step 1: Start the Blockchain Network](#step-1-start-the-blockchain-network)
-3. [Step 2: Deploy the Chaincode](#step-2-deploy-the-chaincode)
-4. [Step 3: Start the REST API](#step-3-start-the-rest-api)
-5. [Step 4: Run Simulations](#step-4-run-simulations)
-6. [Using the System (Advanced)](#using-the-system-advanced)
-7. [Command Reference](#command-reference)
-8. [Troubleshooting](#troubleshooting)
+2. [Step 0: Clone the Repository](#step-0-clone-the-repository)
+3. [Step 1: Start the Blockchain Network](#step-1-start-the-blockchain-network)
+4. [Step 2: Deploy the Chaincode](#step-2-deploy-the-chaincode)
+5. [Step 3: Start the REST API](#step-3-start-the-rest-api)
+6. [Step 4: Run Simulations](#step-4-run-simulations)
+7. [Using the System (Advanced)](#using-the-system-advanced)
+8. [Command Reference](#command-reference)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -24,22 +26,141 @@ This guide walks you through everything you need to know to run, use, and test t
 
 Before you begin, ensure you have:
 
+- ✅ **Linux Server** (Ubuntu 20.04+ or Debian 11+)
 - ✅ **Docker & Docker Compose** installed and running
 - ✅ **Node.js v16+** and npm installed
-- ✅ **Python 3.8+** installed (for simulations)
+- ✅ **Python 3.8+** installed
 - ✅ **Git** installed
-- ✅ **Hyperledger Fabric binaries** downloaded (in `fabric-samples/bin/`)
+- ✅ **curl** installed
+- ✅ **User has Docker permissions** (in docker group)
 
-**Check prerequisites:**
+**Check prerequisites on your Linux server:**
 ```bash
+# Check OS
+cat /etc/os-release
+
+# Check Docker
 docker --version          # Should show Docker version 20.10+
-docker-compose --version  # Should show docker-compose version 1.29+
+docker ps                 # Should connect without sudo
+
+# Check Docker Compose
+docker-compose --version  # Should show version 1.29+
+
+# Check Node.js and npm
 node --version           # Should show v16.0.0 or higher
 npm --version            # Should show 8.0.0 or higher
+
+# Check Python
 python3 --version        # Should show Python 3.8.0 or higher
+pip3 --version          # Should be installed
+
+# Check Git
+git --version           # Should show git version
+
+# Check curl
+curl --version          # Should be installed
 ```
 
-**If you need to install prerequisites, see:** `PREREQUISITES.md`
+**If Docker requires sudo:**
+```bash
+# Add your user to docker group
+sudo usermod -aG docker $USER
+
+# Log out and log back in, OR run:
+newgrp docker
+
+# Verify (should work without sudo)
+docker ps
+```
+
+**Install missing prerequisites (Ubuntu/Debian):**
+```bash
+# Update package list
+sudo apt update
+
+# Install Docker
+sudo apt install -y docker.io docker-compose
+
+# Install Node.js 18.x (recommended)
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Install Python and pip
+sudo apt install -y python3 python3-pip
+
+# Install Git and curl
+sudo apt install -y git curl
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+---
+
+## Step 0: Clone the Repository
+
+### Clone from GitHub
+
+```bash
+# Navigate to your home directory
+cd ~
+
+# Clone the repository
+git clone https://github.com/lifafa03/USDw-stablecoin.git
+
+# Rename to stablecoin-fabric (if needed)
+mv USDw-stablecoin stablecoin-fabric
+
+# Navigate into the project
+cd stablecoin-fabric
+
+# Verify you have all files
+ls -la
+```
+
+**Expected output:**
+```
+drwxr-xr-x  app/
+drwxr-xr-x  chaincode/
+drwxr-xr-x  fabric-samples/
+drwxr-xr-x  scripts/
+drwxr-xr-x  simulation/
+drwxr-xr-x  tests/
+-rw-r--r--  README.md
+-rw-r--r--  USAGE_GUIDE.md
+...
+```
+
+### Install Node.js Dependencies
+
+```bash
+# Install chaincode dependencies
+cd ~/stablecoin-fabric/chaincode/stablecoin-js
+npm install
+
+# Install server dependencies
+cd ~/stablecoin-fabric/app/server
+npm install
+
+# Install Python dependencies
+cd ~/stablecoin-fabric/simulation
+pip3 install requests
+
+# Return to project root
+cd ~/stablecoin-fabric
+```
+
+### Set Project Path Variable (Optional but Recommended)
+
+```bash
+# Add to your ~/.bashrc for convenience
+echo 'export STABLECOIN_HOME=~/stablecoin-fabric' >> ~/.bashrc
+source ~/.bashrc
+
+# Now you can use $STABLECOIN_HOME anywhere
+echo $STABLECOIN_HOME
+```
 
 ---
 
@@ -56,11 +177,11 @@ The blockchain network consists of:
 ### Commands (Copy & Run)
 
 ```bash
-# Verify Docker is running
+# Verify Docker is running (should show empty table or existing containers)
 docker ps
 
 # Navigate to test-network directory
-cd /home/rsolipuram/stablecoin-fabric/fabric-samples/test-network
+cd ~/stablecoin-fabric/fabric-samples/test-network
 
 # Start the network (this takes 2-3 minutes)
 ./network.sh up createChannel -c mychannel -ca
@@ -122,7 +243,7 @@ docker ps
 
 ```bash
 # Navigate to project root
-cd /home/rsolipuram/stablecoin-fabric
+cd ~/stablecoin-fabric
 
 # Deploy chaincode (sequence 1 for first deployment)
 ./scripts/deploy-chaincode.sh 1
@@ -202,28 +323,102 @@ The **REST API** is a web server that provides HTTP endpoints to interact with t
 - Simple HTTP requests (curl, Postman, or any programming language)
 - Runs on port 3000
 
-### Commands (Copy & Run)
+### Step 3a: Create Wallet Identity (One-Time Setup)
+
+**What this does:**
+This script creates a wallet directory and enrolls an application user identity (`appUser`) from Organization 1. This identity is used by the REST API to submit transactions to the blockchain.
+
+**Why it's needed:**
+Every interaction with the Hyperledger Fabric network requires a valid identity with certificates and private keys. The wallet stores these credentials securely.
 
 ```bash
 # Navigate to server directory
-cd /home/rsolipuram/stablecoin-fabric/app/server
+cd ~/stablecoin-fabric/app/server
 
-# Step 3a: Create wallet identity (one-time setup)
+# Run the wallet creation script
 node ../../scripts/create-wallet-identity.js
+```
 
-# Step 3b: Start the REST API server
+**Expected output:**
+```
+Connecting to Fabric CA...
+✓ Successfully enrolled admin user
+✓ Registered and enrolled app user "appUser"
+Wallet path: /home/YOUR_USERNAME/stablecoin-fabric/app/server/wallet
+Successfully enrolled app user "appUser" and imported it into the wallet
+```
+
+**What just happened:**
+1. Script connected to the Certificate Authority (CA) for Org1
+2. Enrolled an admin identity first (needed for user registration)
+3. Registered a new user called `appUser` with the CA
+4. Enrolled `appUser` and received certificates + private key
+5. Saved credentials to `app/server/wallet/` directory
+6. Created `appUser.id` file containing the identity
+
+**Verify wallet was created:**
+```bash
+# Check wallet directory exists
+ls -la ~/stablecoin-fabric/app/server/wallet
+
+# You should see:
+# drwxr-xr-x  wallet/
+#   └── appUser.id (identity file with certificates)
+```
+
+**Troubleshooting:**
+- **Error: "ECONNREFUSED"** → CA container not running. Go back to Step 1 and verify network is up.
+- **Error: "Wallet already exists"** → Already created. Safe to proceed to Step 3b.
+- **Error: "Cannot find module"** → Run `npm install` in `app/server/` directory.
+
+---
+
+### Step 3b: Start the REST API Server
+
+```bash
+# Make sure you're in server directory
+cd ~/stablecoin-fabric/app/server
+
+# Start the server (runs in foreground)
 node server.js
 ```
 
 **Expected output:**
 ```
+Initializing Fabric connection...
+Connecting to Fabric network...
+✓ Wallet initialized at: /home/YOUR_USERNAME/stablecoin-fabric/app/server/wallet
+✓ User 'appUser' found in wallet
+Connection profile loaded from: .../connection-org1.json
 ✓ Successfully connected to Fabric network
+  Channel: mychannel
+  Chaincode: stablecoin
+  Identity: appUser (Org1MSP)
+Connected to Fabric network
+
+================================================
+  Stablecoin REST API Server
+================================================
 Server running on port 3000
+
+Available endpoints:
+  GET    /health
+  POST   /mint              - { accountId, amount }
+  POST   /transfer          - { from, to, amount }
+  POST   /burn              - { accountId, amount }
+  GET    /balance/:accountId
+  GET    /totalsupply
+  GET    /history/:accountId
+  POST   /freeze            - { accountId }
+  POST   /unfreeze          - { accountId }
+================================================
 ```
+
+**Keep this terminal open!** The server needs to stay running.
 
 ### Verify API is Running
 
-**Open a NEW terminal** and test:
+**Open a NEW terminal (SSH session)** and test:
 
 ```bash
 # Test API health endpoint
@@ -237,25 +432,56 @@ curl http://localhost:3000/health
 
 ✅ **SUCCESS:** If you get this response, proceed to Step 4.
 
+❌ **ERROR:** If connection fails:
+- Check server terminal for errors
+- Verify network is running: `docker ps` (should see 7 containers)
+- Verify chaincode is deployed: `docker ps | grep stablecoin`
+
 ---
 
-### Optional: Run Server in Background
+### Optional: Run Server in Background (Linux Server Best Practice)
 
 If you want to run the server in the background and continue using your terminal:
 
 ```bash
-# Stop the foreground server first (Ctrl+C)
+# Stop the foreground server first (Press Ctrl+C in server terminal)
 
-# Start in background
-cd /home/rsolipuram/stablecoin-fabric/app/server
-node server.js > /tmp/server.log 2>&1 &
+# Start in background using nohup (keeps running after logout)
+cd ~/stablecoin-fabric/app/server
+nohup node server.js > /tmp/stablecoin-server.log 2>&1 &
 
-# View logs anytime
-tail -f /tmp/server.log
+# Alternative: Use screen (allows reattaching)
+screen -S stablecoin-api
+cd ~/stablecoin-fabric/app/server
+node server.js
+# Press Ctrl+A then D to detach
+# To reattach later: screen -r stablecoin-api
 
-# Stop server when needed
-pkill -f "node.*server.js"
+# Alternative: Use tmux (similar to screen)
+tmux new -s stablecoin-api
+cd ~/stablecoin-fabric/app/server
+node server.js
+# Press Ctrl+B then D to detach
+# To reattach later: tmux attach -t stablecoin-api
 ```
+
+**Manage background server:**
+```bash
+# View logs (nohup method)
+tail -f /tmp/stablecoin-server.log
+
+# Check if server is running
+ps aux | grep "node.*server.js"
+# OR
+lsof -i :3000
+
+# Stop background server
+pkill -f "node.*server.js"
+# OR (if you have the process ID)
+kill PID_NUMBER
+```
+
+**Recommended for Linux servers:** Use `tmux` or `screen` so you can easily reattach and see live logs.
 
 ---
 
@@ -271,7 +497,7 @@ Now that everything is running, let's test it!
 
 ```bash
 # Navigate to simulation directory
-cd /home/rsolipuram/stablecoin-fabric/simulation
+cd ~/stablecoin-fabric/simulation
 
 # Run quick demo
 python3 demo.py
@@ -327,7 +553,7 @@ Demo completed successfully!
 
 ```bash
 # Navigate to simulation directory
-cd /home/rsolipuram/stablecoin-fabric/simulation
+cd ~/stablecoin-fabric/simulation
 
 # Run full simulation
 python3 run_simulation.py
@@ -418,7 +644,7 @@ Total Supply:               10,000,000 ✓
 
 ```bash
 # Navigate to simulation directory
-cd /home/rsolipuram/stablecoin-fabric/simulation
+cd ~/stablecoin-fabric/simulation
 
 # More users and transactions
 python3 run_simulation.py --num-users 50 --num-transactions 500
@@ -485,22 +711,22 @@ This ensures no tokens were created or lost during transfers.
 
 ```bash
 # 1. Start blockchain network
-cd /home/rsolipuram/stablecoin-fabric/fabric-samples/test-network
+cd ~/stablecoin-fabric/fabric-samples/test-network
 ./network.sh up createChannel -c mychannel -ca
 
 # 2. Deploy chaincode
-cd /home/rsolipuram/stablecoin-fabric
+cd ~/stablecoin-fabric
 ./scripts/deploy-chaincode.sh 1
 
 # 3. Create wallet
-cd /home/rsolipuram/stablecoin-fabric/app/server
+cd ~/stablecoin-fabric/app/server
 node ../../scripts/create-wallet-identity.js
 
 # 4. Start REST API (in background)
 node server.js > /tmp/server.log 2>&1 &
 
 # 5. Run simulation
-cd /home/rsolipuram/stablecoin-fabric/simulation
+cd ~/stablecoin-fabric/simulation
 python3 run_simulation.py
 ```
 
@@ -518,7 +744,7 @@ If the automated script fails, you can deploy manually:
 
 ```bash
 # Navigate to test-network
-cd /home/rsolipuram/stablecoin-fabric/fabric-samples/test-network
+cd ~/stablecoin-fabric/fabric-samples/test-network
 
 # Set up environment variables
 export PATH=${PWD}/../bin:$PATH
@@ -790,7 +1016,7 @@ For testing and debugging, you can invoke chaincode directly using the Fabric CL
 
 ```bash
 # Navigate to test-network
-cd /home/rsolipuram/stablecoin-fabric/fabric-samples/test-network
+cd ~/stablecoin-fabric/fabric-samples/test-network
 
 # Set environment variables for Org1 Admin
 export PATH=${PWD}/../bin:$PATH
