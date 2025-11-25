@@ -53,10 +53,16 @@ The blockchain network consists of:
 - **1 Orderer** - Sequences transactions into blocks
 - **1 Channel** (mychannel) - Private communication pathway
 
-### Command
+### Commands (Copy & Run)
 
 ```bash
-cd fabric-samples/test-network
+# Verify Docker is running
+docker ps
+
+# Navigate to test-network directory
+cd /home/rsolipuram/stablecoin-fabric/fabric-samples/test-network
+
+# Start the network (this takes 2-3 minutes)
 ./network.sh up createChannel -c mychannel -ca
 ```
 
@@ -83,15 +89,16 @@ Peer peer0.org2.example.com joined the channel 'mychannel'
 ### Verify It's Running
 
 ```bash
+# Check if 5 containers are running
 docker ps
-```
 
-**You should see 5 containers running:**
-- `orderer.example.com`
-- `peer0.org1.example.com`
-- `peer0.org2.example.com`
-- `ca_org1`
-- `ca_org2`
+# You should see these containers:
+# - orderer.example.com
+# - peer0.org1.example.com  
+# - peer0.org2.example.com
+# - ca_org1
+# - ca_org2
+```
 
 **✅ SUCCESS:** If you see all 5 containers with status "Up", proceed to Step 2.
 
@@ -111,14 +118,17 @@ docker ps
 - **TotalSupply** - Query total tokens in circulation
 - **FreezeAccount** / **UnfreezeAccount** - Admin controls
 
-### Command (Automated)
+### Commands (Copy & Run)
 
 ```bash
+# Navigate to project root
 cd /home/rsolipuram/stablecoin-fabric
-./scripts/deploy-chaincode.sh 1
-```
 
-**Note:** The `1` is the sequence number. Use `1` for first deployment, `2` for first upgrade, etc.
+# Deploy chaincode (sequence 1 for first deployment)
+./scripts/deploy-chaincode.sh 1
+
+# Note: Use sequence 2 for first upgrade, sequence 3 for second upgrade, etc.
+```
 
 ### What This Does
 
@@ -169,12 +179,13 @@ Deployment completed successfully!
 ### Verify Deployment
 
 ```bash
+# Check if chaincode containers are running
 docker ps | grep stablecoin
-```
 
-**You should see 2 new chaincode containers:**
-- `dev-peer0.org1.example.com-stablecoin_1.0-...`
-- `dev-peer0.org2.example.com-stablecoin_1.0-...`
+# You should see 2 new containers:
+# - dev-peer0.org1.example.com-stablecoin_1.0-...
+# - dev-peer0.org2.example.com-stablecoin_1.0-...
+```
 
 **✅ SUCCESS:** If you see chaincode containers running, proceed to Step 3.
 
@@ -191,88 +202,60 @@ The **REST API** is a web server that provides HTTP endpoints to interact with t
 - Simple HTTP requests (curl, Postman, or any programming language)
 - Runs on port 3000
 
-### Step 3a: Create Wallet Identity
-
-Before starting the API, create an identity:
+### Commands (Copy & Run)
 
 ```bash
-cd app/server
+# Navigate to server directory
+cd /home/rsolipuram/stablecoin-fabric/app/server
+
+# Step 3a: Create wallet identity (one-time setup)
 node ../../scripts/create-wallet-identity.js
-```
 
-**What this does:** Creates a wallet with `appUser` identity enrolled from Org1.
-
-**Expected output:**
-```
-Wallet path: /home/rsolipuram/stablecoin-fabric/app/server/wallet
-Successfully enrolled app user "appUser" and imported it into the wallet
-```
-
-### Step 3b: Start the Server
-
-```bash
+# Step 3b: Start the REST API server
 node server.js
 ```
 
 **Expected output:**
 ```
-Initializing Fabric connection...
-✓ Wallet initialized at: /home/rsolipuram/stablecoin-fabric/app/server/wallet
-✓ User 'appUser' found in wallet
 ✓ Successfully connected to Fabric network
-  Channel: mychannel
-  Chaincode: stablecoin
-  Identity: appUser (Org1MSP)
-
-================================================
-  Stablecoin REST API Server
-================================================
 Server running on port 3000
-
-Available endpoints:
-  GET    /health
-  POST   /mint              - { accountId, amount }
-  POST   /transfer          - { from, to, amount }
-  POST   /burn              - { accountId, amount }
-  GET    /balance/:accountId
-  GET    /totalsupply
-  GET    /history/:accountId
-  POST   /freeze            - { accountId }
-  POST   /unfreeze          - { accountId }
-================================================
 ```
 
 ### Verify API is Running
 
-Open a **new terminal** and test:
+**Open a NEW terminal** and test:
 
 ```bash
+# Test API health endpoint
 curl http://localhost:3000/health
 ```
 
 **Expected response:**
 ```json
-{
-  "status": "healthy",
-  "message": "Stablecoin API is running",
-  "timestamp": "2025-11-25T20:00:00.000Z"
-}
+{"status":"healthy","message":"Stablecoin API is running"}
 ```
 
-**✅ SUCCESS:** If you get a healthy response, proceed to Step 4.
+✅ **SUCCESS:** If you get this response, proceed to Step 4.
 
-**❌ ERROR:** If connection fails, ensure network and chaincode are running.
+---
 
-### Optional: Run in Background
+### Optional: Run Server in Background
 
-To keep the server running after closing terminal:
+If you want to run the server in the background and continue using your terminal:
 
 ```bash
-node server.js > /tmp/server.log 2>&1 &
-```
+# Stop the foreground server first (Ctrl+C)
 
-**View logs:** `tail -f /tmp/server.log`  
-**Stop server:** `pkill -f "node.*server.js"`
+# Start in background
+cd /home/rsolipuram/stablecoin-fabric/app/server
+node server.js > /tmp/server.log 2>&1 &
+
+# View logs anytime
+tail -f /tmp/server.log
+
+# Stop server when needed
+pkill -f "node.*server.js"
+```
 
 ---
 
@@ -280,12 +263,17 @@ node server.js > /tmp/server.log 2>&1 &
 
 Now that everything is running, let's test it!
 
+---
+
 ### Option A: Quick Demo (2 minutes)
 
 **Test basic operations:**
 
 ```bash
+# Navigate to simulation directory
 cd /home/rsolipuram/stablecoin-fabric/simulation
+
+# Run quick demo
 python3 demo.py
 ```
 
@@ -338,6 +326,10 @@ Demo completed successfully!
 **Simulate a real Central Bank Digital Currency system:**
 
 ```bash
+# Navigate to simulation directory
+cd /home/rsolipuram/stablecoin-fabric/simulation
+
+# Run full simulation
 python3 run_simulation.py
 ```
 
@@ -425,6 +417,9 @@ Total Supply:               10,000,000 ✓
 **Customize the simulation parameters:**
 
 ```bash
+# Navigate to simulation directory
+cd /home/rsolipuram/stablecoin-fabric/simulation
+
 # More users and transactions
 python3 run_simulation.py --num-users 50 --num-transactions 500
 
@@ -437,7 +432,7 @@ python3 run_simulation.py --initial-supply 1000000
 # Verbose logging (see every detail)
 python3 run_simulation.py --verbose
 
-# Combine parameters
+# Combine multiple parameters
 python3 run_simulation.py --num-users 20 --num-transactions 200 --verbose
 ```
 
@@ -486,23 +481,27 @@ This ensures no tokens were created or lost during transfers.
 
 ## Quick Start Summary
 
-**Complete setup in 5 commands:**
+**Complete setup in 5 copy-paste commands:**
 
 ```bash
 # 1. Start blockchain network
-cd fabric-samples/test-network && ./network.sh up createChannel -c mychannel -ca
+cd /home/rsolipuram/stablecoin-fabric/fabric-samples/test-network
+./network.sh up createChannel -c mychannel -ca
 
 # 2. Deploy chaincode
-cd ../.. && ./scripts/deploy-chaincode.sh 1
+cd /home/rsolipuram/stablecoin-fabric
+./scripts/deploy-chaincode.sh 1
 
 # 3. Create wallet
-cd app/server && node ../../scripts/create-wallet-identity.js
+cd /home/rsolipuram/stablecoin-fabric/app/server
+node ../../scripts/create-wallet-identity.js
 
 # 4. Start REST API (in background)
 node server.js > /tmp/server.log 2>&1 &
 
 # 5. Run simulation
-cd ../../simulation && python3 run_simulation.py
+cd /home/rsolipuram/stablecoin-fabric/simulation
+python3 run_simulation.py
 ```
 
 **That's it!** Your USDw stablecoin is now running on Hyperledger Fabric. 🚀
@@ -518,9 +517,17 @@ This section covers manual interaction methods for advanced users.
 If the automated script fails, you can deploy manually:
 
 ```bash
-cd fabric-samples/test-network
+# Navigate to test-network
+cd /home/rsolipuram/stablecoin-fabric/fabric-samples/test-network
 
-# 1. Package
+# Set up environment variables
+export PATH=${PWD}/../bin:$PATH
+export FABRIC_CFG_PATH=$PWD/../config/
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+
+# 1. Package chaincode
 peer lifecycle chaincode package stablecoin.tar.gz \
   --path ../../chaincode/stablecoin-js \
   --lang node \
@@ -534,40 +541,60 @@ peer lifecycle chaincode install stablecoin.tar.gz
 # 3. Install on Org2
 export CORE_PEER_LOCALMSPID="Org2MSP"
 export CORE_PEER_ADDRESS=localhost:9051
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
 peer lifecycle chaincode install stablecoin.tar.gz
 
-# 4. Get package ID
+# 4. Get package ID (copy the Package ID from output)
 peer lifecycle chaincode queryinstalled
 
-# 5. Approve for Org1 (replace PACKAGE_ID)
-export CORE_PEER_LOCALMSPID="Org1MSP"
-peer lifecycle chaincode approveformyorg \
-  -o localhost:7050 \
-  --channelID mychannel \
-  --name stablecoin \
-  --version 1.0 \
-  --package-id PACKAGE_ID \
-  --sequence 1
+# 5. Set the package ID (replace with your actual package ID from step 4)
+export PACKAGE_ID=stablecoin_1.0:PUT_YOUR_PACKAGE_ID_HERE
 
 # 6. Approve for Org2
 export CORE_PEER_LOCALMSPID="Org2MSP"
+export CORE_PEER_ADDRESS=localhost:9051
 peer lifecycle chaincode approveformyorg \
   -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls \
+  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
   --channelID mychannel \
   --name stablecoin \
   --version 1.0 \
-  --package-id PACKAGE_ID \
+  --package-id $PACKAGE_ID \
   --sequence 1
 
-# 7. Commit
+# 7. Approve for Org1
+export CORE_PEER_LOCALMSPID="Org1MSP"
+export CORE_PEER_ADDRESS=localhost:7051
+export CORE_PEER_TLS_ROOTCERT_FILE=${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+peer lifecycle chaincode approveformyorg \
+  -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls \
+  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  --channelID mychannel \
+  --name stablecoin \
+  --version 1.0 \
+  --package-id $PACKAGE_ID \
+  --sequence 1
+
+# 8. Commit chaincode definition
 peer lifecycle chaincode commit \
   -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls \
+  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
   --channelID mychannel \
   --name stablecoin \
   --version 1.0 \
   --sequence 1 \
   --peerAddresses localhost:7051 \
-  --peerAddresses localhost:9051
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt"
 ```
 
 ---
@@ -759,11 +786,13 @@ curl -X POST http://localhost:3000/unfreeze \
 
 For testing and debugging, you can invoke chaincode directly using the Fabric CLI.
 
-#### Setup Environment
+#### Setup Environment (Copy & Run Once)
 
 ```bash
-cd fabric-samples/test-network
+# Navigate to test-network
+cd /home/rsolipuram/stablecoin-fabric/fabric-samples/test-network
 
+# Set environment variables for Org1 Admin
 export PATH=${PWD}/../bin:$PATH
 export FABRIC_CFG_PATH=$PWD/../config/
 export CORE_PEER_TLS_ENABLED=true
@@ -773,13 +802,10 @@ export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.examp
 export CORE_PEER_ADDRESS=localhost:7051
 ```
 
-**What this does:**
-- Sets up environment variables to connect to Org1's peer
-- Uses Admin@org1.example.com identity (has admin privileges)
-
-#### Invoke: Mint
+#### CLI Command: Mint Tokens
 
 ```bash
+# Mint 1,000,000 tokens to central_bank account
 peer chaincode invoke \
   -o localhost:7050 \
   --ordererTLSHostnameOverride orderer.example.com \
@@ -794,40 +820,61 @@ peer chaincode invoke \
   -c '{"function":"Mint","Args":["central_bank","1000000"]}'
 ```
 
-**Command breakdown:**
-- `-o localhost:7050` - Connect to orderer
-- `--ordererTLSHostnameOverride orderer.example.com` - TLS hostname for orderer
-- `--tls` - Use TLS encryption
-- `--cafile` - Certificate authority file for orderer
-- `-C mychannel` - Channel name
-- `-n stablecoin` - Chaincode name
-- `--peerAddresses localhost:7051` - Org1 peer address
-- `--tlsRootCertFiles` - TLS cert for Org1 peer
-- `--peerAddresses localhost:9051` - Org2 peer address
-- `--tlsRootCertFiles` - TLS cert for Org2 peer
-- `-c '{"function":"Mint","Args":["central_bank","1000000"]}'` - Function call with arguments
-
-**Why do we need two peers?**
-- Fabric's endorsement policy requires approval from multiple organizations
-- Ensures no single organization can unilaterally modify the ledger
-
-#### Query: Balance
+#### CLI Command: Transfer Tokens
 
 ```bash
+# Transfer 100,000 tokens from central_bank to commercial_bank_a
+peer chaincode invoke \
+  -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls \
+  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  -C mychannel \
+  -n stablecoin \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+  -c '{"function":"Transfer","Args":["central_bank","commercial_bank_a","100000"]}'
+```
+
+#### CLI Command: Query Balance
+
+```bash
+# Query balance of central_bank account
 peer chaincode query \
   -C mychannel \
   -n stablecoin \
   -c '{"function":"BalanceOf","Args":["central_bank"]}'
 ```
 
-**Response:**
-```json
-{"accountId":"central_bank","balance":1000000,"frozen":false}
+#### CLI Command: Query Total Supply
+
+```bash
+# Query total supply of tokens
+peer chaincode query \
+  -C mychannel \
+  -n stablecoin \
+  -c '{"function":"TotalSupply","Args":[]}'
 ```
 
-**Query vs Invoke:**
-- **Query** - Read-only, doesn't create transactions, faster
-- **Invoke** - Writes to ledger, creates transactions, requires endorsement
+#### CLI Command: Burn Tokens
+
+```bash
+# Burn 50,000 tokens from central_bank account (admin only)
+peer chaincode invoke \
+  -o localhost:7050 \
+  --ordererTLSHostnameOverride orderer.example.com \
+  --tls \
+  --cafile "${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem" \
+  -C mychannel \
+  -n stablecoin \
+  --peerAddresses localhost:7051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt" \
+  --peerAddresses localhost:9051 \
+  --tlsRootCertFiles "${PWD}/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt" \
+  -c '{"function":"Burn","Args":["central_bank","50000"]}'
+```
 
 ---
 
