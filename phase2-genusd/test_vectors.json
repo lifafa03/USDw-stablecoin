@@ -1,0 +1,522 @@
+{
+  "test_vectors": {
+    "valid_transactions": {
+      "mint_001": {
+        "description": "Valid MINT: Initial supply creation $1M",
+        "transaction": {
+          "type": "MINT",
+          "tx_id": "MINT_20251128_001",
+          "timestamp": 1732752000,
+          "inputs": [],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 100000000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732752000,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:abc123def456"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "issuer": "SIG_ISSUER_a1b2c3d4e5f6"
+          },
+          "metadata": {
+            "memo": "Initial reserve deposit $1,000,000 USD",
+            "reserve_proof": "BANK_STATEMENT_SHA256:xyz789"
+          }
+        },
+        "expected_result": {
+          "success": true,
+          "utxos_created": 1,
+          "total_supply_after": 100000000
+        }
+      },
+      "mint_002": {
+        "description": "Valid MINT: Multiple outputs to different accounts",
+        "transaction": {
+          "type": "MINT",
+          "tx_id": "MINT_20251128_002",
+          "timestamp": 1732753000,
+          "inputs": [],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 50000000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732753000,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:mint002_1"
+              }
+            },
+            {
+              "owner_id": "x509::/C=GB/O=Org2/CN=uk_treasury",
+              "asset_code": "GENUSD",
+              "amount": 30000000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732753000,
+              "metadata": {
+                "jurisdiction": "GB",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:mint002_2"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "issuer": "SIG_ISSUER_mint002"
+          },
+          "metadata": {
+            "memo": "Multi-jurisdiction mint",
+            "reserve_proof": "BANK_STATEMENT_SHA256:multi_reserve"
+          }
+        },
+        "expected_result": {
+          "success": true,
+          "utxos_created": 2,
+          "total_supply_after": 80000000
+        }
+      },
+      "transfer_001": {
+        "description": "Valid TRANSFER: Payment with change",
+        "transaction": {
+          "type": "TRANSFER",
+          "tx_id": "TRANSFER_20251128_042",
+          "timestamp": 1732755600,
+          "inputs": ["MINT_20251128_001:0"],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=NY/O=Org1/CN=merchant_abc",
+              "asset_code": "GENUSD",
+              "amount": 50000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_2",
+              "created_at": 1732755600,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:abc123def456"
+              }
+            },
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 99950000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732755600,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:abc123def456"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "x509::/C=US/ST=CA/O=Org1/CN=treasury": "SIG_SENDER_xyz789"
+          },
+          "metadata": {
+            "memo": "Payment for invoice #INV-2025-1234"
+          }
+        },
+        "expected_result": {
+          "success": true,
+          "utxos_spent": 1,
+          "utxos_created": 2
+        }
+      },
+      "transfer_002": {
+        "description": "Valid TRANSFER: UTXO consolidation (many-to-one)",
+        "transaction": {
+          "type": "TRANSFER",
+          "tx_id": "TRANSFER_20251128_043",
+          "timestamp": 1732756000,
+          "inputs": [
+            "TRANSFER_20251128_042:1",
+            "MINT_20251128_002:0"
+          ],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 149950000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732756000,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:consolidate"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "x509::/C=US/ST=CA/O=Org1/CN=treasury": "SIG_CONSOLIDATE"
+          },
+          "metadata": {
+            "memo": "Consolidating treasury UTXOs"
+          }
+        },
+        "expected_result": {
+          "success": true,
+          "utxos_spent": 2,
+          "utxos_created": 1
+        }
+      },
+      "burn_001": {
+        "description": "Valid BURN: User redemption",
+        "transaction": {
+          "type": "BURN",
+          "tx_id": "BURN_20251128_099",
+          "timestamp": 1732759200,
+          "inputs": ["TRANSFER_20251128_043:0"],
+          "outputs": [],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "issuer": "SIG_ISSUER_burn123",
+            "x509::/C=US/ST=CA/O=Org1/CN=treasury": "SIG_OWNER_burn456"
+          },
+          "metadata": {
+            "memo": "Redemption for bank wire $1,499,500 USD",
+            "redemption_proof": "WIRE_CONFIRMATION_SHA256:ghi789"
+          }
+        },
+        "expected_result": {
+          "success": true,
+          "utxos_spent": 1,
+          "amount_burned": 149950000,
+          "total_supply_after": 50000
+        }
+      }
+    },
+    "invalid_transactions": {
+      "mint_invalid_001": {
+        "description": "Invalid MINT: Missing issuer signature",
+        "transaction": {
+          "type": "MINT",
+          "tx_id": "MINT_INVALID_001",
+          "timestamp": 1732752000,
+          "inputs": [],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 100000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732752000,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {},
+          "metadata": {
+            "memo": "Attempting mint without authority"
+          }
+        },
+        "expected_error": "MINT requires issuer signature"
+      },
+      "mint_invalid_002": {
+        "description": "Invalid MINT: Insufficient reserves",
+        "transaction": {
+          "type": "MINT",
+          "tx_id": "MINT_INVALID_002",
+          "timestamp": 1732752000,
+          "inputs": [],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 999999999999,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732752000,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "issuer": "SIG_ISSUER_invalid"
+          },
+          "metadata": {
+            "memo": "Attempting to mint without reserves"
+          }
+        },
+        "expected_error": "Insufficient reserves"
+      },
+      "mint_invalid_003": {
+        "description": "Invalid MINT: Has inputs (should be empty)",
+        "transaction": {
+          "type": "MINT",
+          "tx_id": "MINT_INVALID_003",
+          "timestamp": 1732752000,
+          "inputs": ["FAKE_UTXO:0"],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 100000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732752000,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "issuer": "SIG_ISSUER_invalid"
+          },
+          "metadata": {
+            "memo": "Invalid mint with inputs"
+          }
+        },
+        "expected_error": "MINT transaction must have empty inputs"
+      },
+      "transfer_invalid_001": {
+        "description": "Invalid TRANSFER: Conservation law violation",
+        "transaction": {
+          "type": "TRANSFER",
+          "tx_id": "TRANSFER_INVALID_001",
+          "timestamp": 1732755600,
+          "inputs": ["MINT_20251128_001:0"],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=NY/O=Org1/CN=merchant_abc",
+              "asset_code": "GENUSD",
+              "amount": 50000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_2",
+              "created_at": 1732755600,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            },
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 60000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732755600,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "x509::/C=US/ST=CA/O=Org1/CN=treasury": "SIG_INVALID"
+          },
+          "metadata": {
+            "memo": "Trying to create extra tokens"
+          }
+        },
+        "expected_error": "Input sum"
+      },
+      "transfer_invalid_002": {
+        "description": "Invalid TRANSFER: Spending frozen UTXO",
+        "transaction": {
+          "type": "TRANSFER",
+          "tx_id": "TRANSFER_INVALID_002",
+          "timestamp": 1732755600,
+          "inputs": ["FROZEN_UTXO_123:0"],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=NY/O=Org1/CN=merchant_abc",
+              "asset_code": "GENUSD",
+              "amount": 50000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_2",
+              "created_at": 1732755600,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "x509::/C=US/ST=CA/O=Org1/CN=treasury": "SIG_INVALID"
+          },
+          "metadata": {
+            "memo": "Trying to spend frozen UTXO"
+          }
+        },
+        "expected_error": "not active"
+      },
+      "transfer_invalid_003": {
+        "description": "Invalid TRANSFER: Missing sender signature",
+        "transaction": {
+          "type": "TRANSFER",
+          "tx_id": "TRANSFER_INVALID_003",
+          "timestamp": 1732755600,
+          "inputs": ["MINT_20251128_001:0"],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=NY/O=Org1/CN=attacker",
+              "asset_code": "GENUSD",
+              "amount": 100000000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_2",
+              "created_at": 1732755600,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {},
+          "metadata": {
+            "memo": "Attempting theft without signature"
+          }
+        },
+        "expected_error": "Missing signature from owner"
+      },
+      "transfer_invalid_004": {
+        "description": "Invalid TRANSFER: Recipient not KYC registered",
+        "transaction": {
+          "type": "TRANSFER",
+          "tx_id": "TRANSFER_INVALID_004",
+          "timestamp": 1732755600,
+          "inputs": ["MINT_20251128_001:0"],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=XX/O=Unknown/CN=no_kyc_user",
+              "asset_code": "GENUSD",
+              "amount": 100000000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_2",
+              "created_at": 1732755600,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "x509::/C=US/ST=CA/O=Org1/CN=treasury": "SIG_VALID"
+          },
+          "metadata": {
+            "memo": "Sending to unregistered user"
+          }
+        },
+        "expected_error": "has no KYC registration"
+      },
+      "burn_invalid_001": {
+        "description": "Invalid BURN: Below minimum redemption amount",
+        "transaction": {
+          "type": "BURN",
+          "tx_id": "BURN_INVALID_001",
+          "timestamp": 1732759200,
+          "inputs": ["SMALL_UTXO:0"],
+          "outputs": [],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "issuer": "SIG_ISSUER_burn"
+          },
+          "metadata": {
+            "memo": "Trying to burn $500 (below $1,000 min)",
+            "redemption_proof": "WIRE_SHA256:test"
+          }
+        },
+        "expected_error": "below minimum"
+      },
+      "burn_invalid_002": {
+        "description": "Invalid BURN: Has outputs (should be empty)",
+        "transaction": {
+          "type": "BURN",
+          "tx_id": "BURN_INVALID_002",
+          "timestamp": 1732759200,
+          "inputs": ["MINT_20251128_001:0"],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=CA/O=Org1/CN=treasury",
+              "asset_code": "GENUSD",
+              "amount": 50000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_3",
+              "created_at": 1732759200,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "issuer": "SIG_ISSUER_burn"
+          },
+          "metadata": {
+            "memo": "Invalid burn with outputs"
+          }
+        },
+        "expected_error": "BURN transaction must have empty outputs"
+      }
+    }
+  }
+}
