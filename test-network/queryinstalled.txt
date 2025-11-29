@@ -1,2 +1,5 @@
 Installed chaincodes on peer:
-Package ID: stablecoin_1.0:09c4f16f4d06d56547b2966b5478bf8fc69e5c7ae16ce669397489c6baec218d, Label: stablecoin_1.0
+Package ID: genusd_1.0:84b2c64f8aabf1847fc3b89affa9972d915824910454868a62738288d8c0eb9b, Label: genusd_1.0
+Package ID: stablecoin_1.0:c8265b2129373e37ce6ed0e0ea6d9892cb114250cd9da36b497b102c110136d1, Label: stablecoin_1.0
+Package ID: stablecoin_1.0:c646068d89152b2e87c91490028e0fd3a7b18ba5bf262f886e289f790be6e4b9, Label: stablecoin_1.0
+Package ID: genusd_1.0:93f21f57a9a8775eff661fc167f1183f90b66d9a5bcbb10814e6ec7c8094d296, Label: genusd_1.0
