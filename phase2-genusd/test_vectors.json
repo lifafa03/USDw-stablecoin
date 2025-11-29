@@ -431,10 +431,44 @@
         "expected_error": "Missing signature from owner"
       },
       "transfer_invalid_004": {
-        "description": "Invalid TRANSFER: Recipient not KYC registered",
+        "description": "Invalid TRANSFER: Double-spend attempt (reusing spent UTXO)",
         "transaction": {
           "type": "TRANSFER",
           "tx_id": "TRANSFER_INVALID_004",
+          "timestamp": 1732755700,
+          "inputs": ["TRANSFER_20251128_001:0"],
+          "outputs": [
+            {
+              "owner_id": "x509::/C=US/ST=NY/O=Org1/CN=attacker",
+              "asset_code": "GENUSD",
+              "amount": 60000000,
+              "status": "active",
+              "kyc_tag": "KYC_LEVEL_2",
+              "created_at": 1732755700,
+              "metadata": {
+                "jurisdiction": "US",
+                "blacklist_flag": false,
+                "freeze_reason": null,
+                "policy_version": "POLICY_V1.0",
+                "issuer_attestation": "SHA256:test"
+              }
+            }
+          ],
+          "policy_ref": "POLICY_V1.0",
+          "signatures": {
+            "x509::/C=US/ST=NY/O=Org1/CN=merchant_abc": "SIG_DOUBLE_SPEND"
+          },
+          "metadata": {
+            "memo": "Attempting to spend already-spent UTXO"
+          }
+        },
+        "expected_error": "is not active"
+      },
+      "transfer_invalid_005": {
+        "description": "Invalid TRANSFER: Recipient not KYC registered",
+        "transaction": {
+          "type": "TRANSFER",
+          "tx_id": "TRANSFER_INVALID_005",
           "timestamp": 1732755600,
           "inputs": ["MINT_20251128_001:0"],
           "outputs": [
