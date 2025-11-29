@@ -31,3 +31,4 @@ coverage/
 
 # Environment variables
 .env
+chaincode/genusd-chaincode/vendor/
