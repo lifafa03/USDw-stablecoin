@@ -1,14 +1,13 @@
 package pqcrypto
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
 
-	"golang.org/x/crypto/sha3"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
 )
 
 // DilithiumMode represents the security level of Dilithium
@@ -89,9 +88,8 @@ func (dv *DilithiumVerifier) GetKey(identifier string) (*DilithiumPublicKey, err
 	return key, nil
 }
 
-// Verify verifies a Dilithium signature
-// NOTE: This is a MOCK implementation for Phase 3
-// In production, integrate with PQClean or liboqs for real Dilithium verification
+// Verify verifies a Dilithium signature using real ML-DSA-65 cryptography
+// PRODUCTION: Now uses Cloudflare CIRCL ML-DSA-65 for real post-quantum verification
 func (dv *DilithiumVerifier) Verify(message []byte, signature *DilithiumSignature, signerID string) error {
 	dv.mu.RLock()
 	pubKey, exists := dv.keys[signerID]
@@ -101,26 +99,25 @@ func (dv *DilithiumVerifier) Verify(message []byte, signature *DilithiumSignatur
 		return fmt.Errorf("public key not registered for signer: %s", signerID)
 	}
 
-	// Validate signature size
-	expectedSigSize := getSignatureSize(signature.Mode)
-	if len(signature.SignatureBytes) != expectedSigSize {
-		return fmt.Errorf("invalid signature size for mode %d: expected %d, got %d",
-			signature.Mode, expectedSigSize, len(signature.SignatureBytes))
+	// Validate signature size (ML-DSA-65 uses 3309 bytes)
+	if len(signature.SignatureBytes) != mldsa65.SignatureSize {
+		return fmt.Errorf("invalid signature size: expected %d, got %d",
+			mldsa65.SignatureSize, len(signature.SignatureBytes))
 	}
 
-	// Validate mode consistency
-	if pubKey.Mode != signature.Mode {
-		return fmt.Errorf("mode mismatch: key mode %d, signature mode %d", pubKey.Mode, signature.Mode)
+	// Validate key size (ML-DSA-65 public key is 1952 bytes)
+	if len(pubKey.KeyBytes) != mldsa65.PublicKeySize {
+		return fmt.Errorf("invalid public key size: expected %d, got %d",
+			mldsa65.PublicKeySize, len(pubKey.KeyBytes))
 	}
 
-	// === MOCK VERIFICATION LOGIC ===
-	// In production, replace with actual Dilithium verification from PQClean
-	// Real verification: return dilithium_verify(message, signature, pubKey)
-	
-	// For Phase 3 mock: verify deterministic hash-based signature
-	expectedSig := generateMockSignature(message, pubKey.KeyBytes, signature.Mode)
-	
-	if !constantTimeCompare(signature.SignatureBytes, expectedSig) {
+	// Use real Dilithium verification from real_dilithium.go
+	valid, err := VerifyRealDilithium(message, signature.SignatureBytes, pubKey.KeyBytes)
+	if err != nil {
+		return fmt.Errorf("verification error: %w", err)
+	}
+
+	if !valid {
 		return errors.New("signature verification failed: invalid signature")
 	}
 
@@ -176,58 +173,18 @@ func getSignatureSize(mode DilithiumMode) int {
 	}
 }
 
-// generateMockSignature generates a deterministic mock signature
-// PRODUCTION NOTE: Replace with actual Dilithium signing
-func generateMockSignature(message []byte, pubKey []byte, mode DilithiumMode) []byte {
-	// Use SHAKE256 (extendable-output function) for deterministic signature generation
-	h := sha3.NewShake256()
-	h.Write([]byte("DILITHIUM_MOCK_SIG_V1"))
-	h.Write(pubKey)
-	h.Write(message)
-	
-	sigSize := getSignatureSize(mode)
-	signature := make([]byte, sigSize)
-	h.Read(signature)
-	
-	return signature
-}
-
-// constantTimeCompare performs constant-time comparison to prevent timing attacks
-func constantTimeCompare(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	
-	var v byte
-	for i := 0; i < len(a); i++ {
-		v |= a[i] ^ b[i]
-	}
-	
-	return v == 0
-}
-
-// GenerateMockKeyPair generates a mock Dilithium key pair for testing
-// PRODUCTION NOTE: Replace with actual Dilithium key generation
+// GenerateMockKeyPair generates a real Dilithium (ML-DSA-65) key pair
+// PRODUCTION: Now uses real ML-DSA-65 key generation via CIRCL library
 func GenerateMockKeyPair(mode DilithiumMode, identifier string) (*DilithiumPublicKey, []byte, error) {
-	pubKeySize := getPublicKeySize(mode)
-	if pubKeySize == 0 {
-		return nil, nil, fmt.Errorf("invalid Dilithium mode: %d", mode)
+	// Generate real ML-DSA-65 key pair
+	pubKeyBytes, privKeyBytes, err := GenerateRealKeyPair()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to generate real key pair: %w", err)
 	}
 
-	// Generate random public key (in production, this would come from Dilithium keygen)
-	pubKeyBytes := make([]byte, pubKeySize)
-	if _, err := rand.Read(pubKeyBytes); err != nil {
-		return nil, nil, fmt.Errorf("failed to generate public key: %w", err)
-	}
-
-	// Generate mock private key (in production, use Dilithium private key format)
-	privKeyBytes := make([]byte, pubKeySize*2) // Mock: private key is 2x public key size
-	if _, err := rand.Read(privKeyBytes); err != nil {
-		return nil, nil, fmt.Errorf("failed to generate private key: %w", err)
-	}
-
+	// Note: ML-DSA-65 is equivalent to Dilithium3, so we use that mode
 	pubKey := &DilithiumPublicKey{
-		Mode:       mode,
+		Mode:       Dilithium3, // ML-DSA-65 = Dilithium3 security level
 		KeyBytes:   pubKeyBytes,
 		Identifier: identifier,
 	}
@@ -235,29 +192,26 @@ func GenerateMockKeyPair(mode DilithiumMode, identifier string) (*DilithiumPubli
 	return pubKey, privKeyBytes, nil
 }
 
-// SignMessage creates a mock Dilithium signature
-// PRODUCTION NOTE: Replace with actual Dilithium signing
+// SignMessage creates a real Dilithium (ML-DSA-65) signature
+// PRODUCTION: Now uses real ML-DSA-65 signing via CIRCL library
 func SignMessage(message []byte, privKey []byte, mode DilithiumMode, signerID string) (*DilithiumSignature, error) {
-	// Derive public key from private key (mock operation)
-	pubKeySize := getPublicKeySize(mode)
-	if len(privKey) < pubKeySize {
-		return nil, errors.New("invalid private key size")
+	// Sign using real ML-DSA-65
+	signatureBytes, err := SignMessageReal(message, privKey)
+	if err != nil {
+		return nil, fmt.Errorf("signing failed: %w", err)
 	}
-	
-	pubKey := privKey[:pubKeySize] // Mock: extract public key portion
-	signatureBytes := generateMockSignature(message, pubKey, mode)
 
 	return &DilithiumSignature{
-		Mode:           mode,
+		Mode:           Dilithium3, // ML-DSA-65 = Dilithium3 security level
 		SignatureBytes: signatureBytes,
 		Timestamp:      getCurrentTimestamp(),
 		Signer:         signerID,
 	}, nil
 }
 
-// HashMessage creates a SHA3-256 hash of a message for signing
+// HashMessage creates a SHA256 hash of a message for signing
 func HashMessage(message []byte) []byte {
-	hash := sha3.Sum256(message)
+	hash := sha256.Sum256(message)
 	return hash[:]
 }
 

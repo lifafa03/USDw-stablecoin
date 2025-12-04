@@ -37,12 +37,30 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 const FabricClient = require('./fabric-client');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ==================== Middleware Configuration ====================
+
+// PRODUCTION: Rate limiting to prevent abuse
+const readLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 1000, // 1000 requests per windowMs for read operations
+	message: 'Too many read requests from this IP, please try again later',
+	standardHeaders: true, // Return rate limit info in headers
+	legacyHeaders: false,
+});
+
+const writeLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes  
+	max: 100, // 100 write requests per windowMs
+	message: 'Too many write requests from this IP, please try again later',
+	standardHeaders: true,
+	legacyHeaders: false,
+});
 
 // Enable CORS for all routes
 // Allows frontend applications on different domains to call this API
@@ -272,7 +290,7 @@ app.get('/health', (req, res) => {
  * @returns {400} Invalid input
  * @returns {500} Fabric error
  */
-app.post('/mint', asyncHandler(async (req, res) => {
+app.post('/mint', writeLimiter, asyncHandler(async (req, res) => {
     const { accountId, amount } = req.body;
 
     // Validate account ID
@@ -326,7 +344,7 @@ app.post('/mint', asyncHandler(async (req, res) => {
  * @returns {400} Invalid input
  * @returns {500} Fabric error (insufficient balance, frozen, etc.)
  */
-app.post('/transfer', asyncHandler(async (req, res) => {
+app.post('/transfer', writeLimiter, asyncHandler(async (req, res) => {
     const { from, to, amount } = req.body;
 
     // Validate sender account ID
@@ -392,7 +410,7 @@ app.post('/transfer', asyncHandler(async (req, res) => {
  * @returns {400} Invalid input
  * @returns {500} Fabric error (insufficient balance, etc.)
  */
-app.post('/burn', asyncHandler(async (req, res) => {
+app.post('/burn', writeLimiter, asyncHandler(async (req, res) => {
     const { accountId, amount } = req.body;
 
     // Validate account ID
@@ -441,7 +459,7 @@ app.post('/burn', asyncHandler(async (req, res) => {
  * @returns {400} Invalid account ID
  * @returns {500} Fabric error
  */
-app.get('/balance/:accountId', asyncHandler(async (req, res) => {
+app.get('/balance/:accountId', readLimiter, asyncHandler(async (req, res) => {
     const { accountId } = req.params;
 
     // Validate account ID
@@ -454,11 +472,14 @@ app.get('/balance/:accountId', asyncHandler(async (req, res) => {
     }
 
     // Query balance from chaincode
-    const result = await fabricClient.balanceOf(accountId);
+    const balance = await fabricClient.balanceOf(accountId);
     
     res.json({
         success: true,
-        data: result
+        data: {
+            accountId: accountId,
+            balance: parseInt(balance) || 0
+        }
     });
 }));
 
@@ -474,7 +495,7 @@ app.get('/balance/:accountId', asyncHandler(async (req, res) => {
  * @returns {200} {success: true, data: {totalSupply}}
  * @returns {500} Fabric error
  */
-app.get('/totalsupply', asyncHandler(async (req, res) => {
+app.get('/totalsupply', readLimiter, asyncHandler(async (req, res) => {
     // Query total supply from chaincode
     const result = await fabricClient.totalSupply();
     
@@ -498,7 +519,7 @@ app.get('/totalsupply', asyncHandler(async (req, res) => {
  * @returns {400} Invalid account ID
  * @returns {500} Fabric error
  */
-app.get('/history/:accountId', asyncHandler(async (req, res) => {
+app.get('/history/:accountId', readLimiter, asyncHandler(async (req, res) => {
     const { accountId } = req.params;
 
     // Validate account ID
@@ -535,7 +556,7 @@ app.get('/history/:accountId', asyncHandler(async (req, res) => {
  * @returns {400} Invalid input
  * @returns {500} Fabric error (permission denied, etc.)
  */
-app.post('/freeze', asyncHandler(async (req, res) => {
+app.post('/freeze', writeLimiter, asyncHandler(async (req, res) => {
     const { accountId } = req.body;
 
     // Validate account ID
@@ -571,7 +592,7 @@ app.post('/freeze', asyncHandler(async (req, res) => {
  * @returns {400} Invalid input
  * @returns {500} Fabric error (permission denied, etc.)
  */
-app.post('/unfreeze', asyncHandler(async (req, res) => {
+app.post('/unfreeze', writeLimiter, asyncHandler(async (req, res) => {
     const { accountId } = req.body;
 
     // Validate account ID

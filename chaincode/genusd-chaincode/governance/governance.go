@@ -60,15 +60,17 @@ type GovernanceAction struct {
 
 // GovernanceManager handles all governance operations
 type GovernanceManager struct {
-	verifier *pqcrypto.DilithiumVerifier
-	logger   *telemetry.AuditLogger
+	verifier       *pqcrypto.DilithiumVerifier
+	logger         *telemetry.AuditLogger
+	multisigMgr    *MultisigManager // NEW: Multisig approval system
 }
 
 // NewGovernanceManager creates a new governance manager
 func NewGovernanceManager(verifier *pqcrypto.DilithiumVerifier, logger *telemetry.AuditLogger) *GovernanceManager {
 	return &GovernanceManager{
-		verifier: verifier,
-		logger:   logger,
+		verifier:    verifier,
+		logger:      logger,
+		multisigMgr: NewMultisigManager(verifier), // Initialize multisig with 2-of-3 default
 	}
 }
 
@@ -489,4 +491,56 @@ func (gm *GovernanceManager) logGovernanceAction(
 	if gm.logger != nil {
 		gm.logger.LogGovernanceAction(action, actor, target, parameters)
 	}
+}
+
+// ========== MULTISIG GOVERNANCE METHODS ==========
+
+// CreateMultisigProposal creates a new proposal requiring multiple approvals
+func (gm *GovernanceManager) CreateMultisigProposal(
+	ctx contractapi.TransactionContextInterface,
+	proposalType ProposalType,
+	proposer string,
+	payload map[string]interface{},
+) (*MultisigProposal, error) {
+	return gm.multisigMgr.CreateProposal(ctx, proposalType, proposer, payload)
+}
+
+// ApproveMultisigProposal adds approval to a proposal
+func (gm *GovernanceManager) ApproveMultisigProposal(
+	ctx contractapi.TransactionContextInterface,
+	proposalID string,
+	signer string,
+	signature *pqcrypto.DilithiumSignature,
+) error {
+	return gm.multisigMgr.ApproveProposal(ctx, proposalID, signer, signature)
+}
+
+// ExecuteMultisigProposal executes an approved proposal
+func (gm *GovernanceManager) ExecuteMultisigProposal(
+	ctx contractapi.TransactionContextInterface,
+	proposalID string,
+	executor string,
+) error {
+	return gm.multisigMgr.ExecuteProposal(ctx, proposalID, executor)
+}
+
+// GetMultisigProposal retrieves a proposal by ID
+func (gm *GovernanceManager) GetMultisigProposal(
+	ctx contractapi.TransactionContextInterface,
+	proposalID string,
+) (*MultisigProposal, error) {
+	return gm.multisigMgr.GetProposal(ctx, proposalID)
+}
+
+// ListMultisigProposals lists proposals by status
+func (gm *GovernanceManager) ListMultisigProposals(
+	ctx contractapi.TransactionContextInterface,
+	status ProposalStatus,
+) ([]*MultisigProposal, error) {
+	return gm.multisigMgr.ListProposals(ctx, status)
+}
+
+// GetMultisigConfig returns current multisig configuration
+func (gm *GovernanceManager) GetMultisigConfig() *MultisigConfig {
+	return gm.multisigMgr.GetConfig()
 }

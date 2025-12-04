@@ -22,7 +22,7 @@
  */
 
 const FabricCAServices = require('fabric-ca-client');
-const { Wallets, Gateway } = require('fabric-network');
+const { Wallets, Gateway, DefaultQueryHandlerStrategies } = require('fabric-network');
 const fs = require('fs');
 const path = require('path');
 
@@ -36,22 +36,15 @@ class FabricClient {
         
         // Network configuration
         this.channelName = 'mychannel';           // Channel name (must match deployment)
-        this.chaincodeName = 'stablecoin';        // Chaincode name (must match deployment)
+        this.chaincodeName = 'genusd';            // Chaincode name (must match deployment)
         this.orgName = 'Org1';                    // Organization name
         this.mspId = 'Org1MSP';                   // MSP identifier for Org1
-        this.userId = 'appUser';                  // Application user identity
+        this.userId = 'Admin@org1.example.com';   // Use Admin user for testing
         
         // Connection profile path (relative to this file)
         this.connectionProfilePath = path.resolve(
             __dirname,
-            '..',
-            '..',
-            'fabric-samples',
-            'test-network',
-            'organizations',
-            'peerOrganizations',
-            'org1.example.com',
-            'connection-org1.json'
+            'connection-org1-with-channel.json'
         );
         
         // Wallet storage path
@@ -352,6 +345,9 @@ class FabricClient {
                     enabled: false,                     // Disable service discovery for cryptogen
                     asLocalhost: true                   // Map discovered addresses to localhost
                                                         // (required for Docker networks)
+                },
+                queryHandlerOptions: {
+                    strategy: DefaultQueryHandlerStrategies.MSPID_SCOPE_SINGLE
                 }
             });
 
@@ -394,8 +390,8 @@ class FabricClient {
         const network = await this.gateway.getNetwork(this.channelName);
         
         // Get the contract (chaincode) from the network
-        // This returns a Contract object for interacting with the chaincode
-        const contract = network.getContract(this.chaincodeName);
+        // Use empty string for default contract name
+        const contract = network.getContract(this.chaincodeName, '');
         
         return contract;
     }
@@ -432,12 +428,23 @@ class FabricClient {
             // It returns when the transaction is committed to the ledger
             const result = await contract.submitTransaction(functionName, ...args);
             
-            // Parse the result (chaincode returns JSON strings)
-            const parsedResult = JSON.parse(result.toString());
+            // Parse the result if there is one
+            const resultString = result.toString();
+            if (resultString && resultString.length > 0) {
+                try {
+                    const parsed = JSON.parse(resultString);
+                    console.log(`✓ Transaction ${functionName} submitted successfully`);
+                    return parsed;
+                } catch (parseError) {
+                    // Not JSON, return as-is
+                    console.log(`✓ Transaction ${functionName} submitted successfully (raw)`);
+                    return resultString;
+                }
+            }
             
+            // Empty result - transaction succeeded with no return value
             console.log(`✓ Transaction ${functionName} submitted successfully`);
-            
-            return parsedResult;
+            return { success: true };
             
         } catch (error) {
             // Enhanced error logging for debugging
@@ -485,17 +492,26 @@ class FabricClient {
             // Returns immediately with result (no ledger write)
             const result = await contract.evaluateTransaction(functionName, ...args);
             
-            // Parse the result
-            const parsedResult = JSON.parse(result.toString());
+            // Convert result to string
+            const resultString = result.toString();
+            console.log(`✓ Raw result: ${resultString}`);
             
-            console.log(`✓ Transaction ${functionName} evaluated successfully`);
-            
-            return parsedResult;
+            // Try to parse as JSON, if it fails return as-is
+            try {
+                const parsedResult = JSON.parse(resultString);
+                console.log(`✓ Transaction ${functionName} evaluated successfully (JSON)`);
+                return parsedResult;
+            } catch (parseError) {
+                // Not JSON, return the string value
+                console.log(`✓ Transaction ${functionName} evaluated successfully (raw)`);
+                return resultString;
+            }
             
         } catch (error) {
             console.error(`✗ Failed to evaluate transaction: ${functionName}`);
             console.error(`  Arguments: ${args.join(', ')}`);
             console.error(`  Error: ${error.message}`);
+            console.error(`  Stack: ${error.stack}`);
             
             const errorMessage = this.extractErrorMessage(error);
             throw new Error(errorMessage);
@@ -570,7 +586,7 @@ class FabricClient {
      * @returns {Promise<Object>} Transaction result
      */
     async mint(accountId, amount) {
-        return await this.submitTransaction('Mint', accountId, amount.toString());
+        return await this.submitTransaction('SimpleMint', accountId, amount.toString());
     }
 
     /**
@@ -582,7 +598,7 @@ class FabricClient {
      * @returns {Promise<Object>} Transaction result
      */
     async transfer(fromAccountId, toAccountId, amount) {
-        return await this.submitTransaction('Transfer', fromAccountId, toAccountId, amount.toString());
+        return await this.submitTransaction('SimpleTransfer', fromAccountId, toAccountId, amount.toString());
     }
 
     /**
@@ -593,17 +609,17 @@ class FabricClient {
      * @returns {Promise<Object>} Transaction result
      */
     async burn(accountId, amount) {
-        return await this.submitTransaction('Burn', accountId, amount.toString());
+        return await this.submitTransaction('SimpleBurn', accountId, amount.toString());
     }
 
     /**
      * Query account balance
      * 
-     * @param {string} accountId - Account ID to query
-     * @returns {Promise<Object>} Account balance and status
+     * @param {string} userID - User ID to query
+     * @returns {Promise<number>} Account balance
      */
-    async balanceOf(accountId) {
-        return await this.evaluateTransaction('BalanceOf', accountId);
+    async balanceOf(userID) {
+        return await this.evaluateTransaction('GetBalance', userID);
     }
 
     /**
@@ -612,17 +628,21 @@ class FabricClient {
      * @returns {Promise<Object>} Total supply information
      */
     async totalSupply() {
-        return await this.evaluateTransaction('TotalSupply');
+        const result = await this.evaluateTransaction('GetTotalSupply');
+        const totalSupply = parseInt(result) || 0;
+        return { totalSupply };
     }
 
     /**
-     * Get account transaction history
+     * Get account UTXOs (genusd uses UTXO model)
      * 
-     * @param {string} accountId - Account ID to query
-     * @returns {Promise<Object>} Transaction history
+     * @param {string} userID - User ID to query
+     * @returns {Promise<Object>} UTXOs for user
      */
-    async getAccountHistory(accountId) {
-        return await this.evaluateTransaction('GetAccountHistory', accountId);
+    async getAccountHistory(userID) {
+        // genusd uses UTXO model, get balance as history indicator
+        const balance = await this.balanceOf(userID);
+        return { userID, balance, note: 'genusd uses UTXO model - check GetBalance and GetUTXO' };
     }
 
     /**

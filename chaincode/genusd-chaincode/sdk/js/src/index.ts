@@ -272,10 +272,7 @@ export class GENUSDClient {
    */
   async governance(request: GovernanceRequest): Promise<APIResponse> {
     const endpoint = `/policy/${request.action}`;
-    const message = JSON.stringify({
-      action: request.action,
-      ...request,
-    });
+    const message = JSON.stringify(request);
 
     const headers = this.createSignatureHeaders(message, request.admin_id);
 

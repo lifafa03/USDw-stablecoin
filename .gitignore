@@ -24,6 +24,8 @@ Thumbs.db
 # Fabric artifacts
 *.tar.gz
 queryinstalled.txt
+test-network/blockchain-explorer/
+test-network/*.block
 
 # Test coverage
 coverage/

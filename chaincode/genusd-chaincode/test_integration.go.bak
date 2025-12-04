@@ -1,0 +1,126 @@
+// +build ignore
+
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+
+	"github.com/lifafa03/genusd-chaincode/pqcrypto"
+)
+
+// Integration test to verify real Dilithium signatures work end-to-end
+func main() {
+	fmt.Println("=== Phase 4 Integration Test ===")
+	fmt.Println("Testing Real Dilithium (ML-DSA-65) Signatures")
+	fmt.Println()
+
+	// Test 1: Key Generation
+	fmt.Println("Test 1: Generating real ML-DSA-65 key pair...")
+	pubKey, privKey, err := pqcrypto.GenerateRealKeyPair()
+	if err != nil {
+		log.Fatalf("Failed to generate key pair: %v", err)
+	}
+	fmt.Printf("✓ Generated public key (%d bytes)\n", len(pubKey))
+	fmt.Printf("✓ Generated private key (%d bytes)\n", len(privKey))
+	fmt.Println()
+
+	// Test 2: Sign a message
+	fmt.Println("Test 2: Signing a message...")
+	message := []byte("This is a test transaction for USDw Phase 4")
+	signature, err := pqcrypto.SignMessageReal(message, privKey)
+	if err != nil {
+		log.Fatalf("Failed to sign message: %v", err)
+	}
+	fmt.Printf("✓ Created signature (%d bytes)\n", len(signature))
+	fmt.Println()
+
+	// Test 3: Verify the signature
+	fmt.Println("Test 3: Verifying signature...")
+	valid, err := pqcrypto.VerifyRealDilithium(message, signature, pubKey)
+	if err != nil {
+		log.Fatalf("Verification error: %v", err)
+	}
+	if !valid {
+		log.Fatal("✗ Signature verification failed!")
+	}
+	fmt.Println("✓ Signature verification succeeded")
+	fmt.Println()
+
+	// Test 4: Verify with wrong message fails
+	fmt.Println("Test 4: Testing tampered message detection...")
+	tamperedMessage := []byte("This is a TAMPERED transaction")
+	valid, _ = pqcrypto.VerifyRealDilithium(tamperedMessage, signature, pubKey)
+	if valid {
+		log.Fatal("✗ Tampered message verified (should have failed)!")
+	}
+	fmt.Println("✓ Tampered message rejected correctly")
+	fmt.Println()
+
+	// Test 5: Use DilithiumVerifier (as used in chaincode)
+	fmt.Println("Test 5: Testing DilithiumVerifier (chaincode path)...")
+	verifier := pqcrypto.NewDilithiumVerifier()
+	
+	// Generate keys using GenerateMockKeyPair (now uses real keys)
+	testKey, testPriv, err := pqcrypto.GenerateMockKeyPair(pqcrypto.Dilithium3, "test-issuer")
+	if err != nil {
+		log.Fatalf("Failed to generate test key: %v", err)
+	}
+	verifier.RegisterKey("test-issuer", testKey)
+	
+	// Sign with the generated key
+	testMsg := []byte("mint_1000000_to_user123")
+	testSig, err := pqcrypto.SignMessage(testMsg, testPriv, pqcrypto.Dilithium3, "test-issuer")
+	if err != nil {
+		log.Fatalf("Failed to sign with test key: %v", err)
+	}
+	
+	// Verify using verifier
+	err = verifier.Verify(testMsg, testSig, "test-issuer")
+	if err != nil {
+		log.Fatalf("Verifier failed: %v", err)
+	}
+	fmt.Println("✓ DilithiumVerifier working correctly")
+	fmt.Println()
+
+	// Test 6: Key size validation
+	fmt.Println("Test 6: Verifying key sizes match ML-DSA-65 spec...")
+	keyInfo := pqcrypto.GetKeyInfo()
+	fmt.Printf("  Public Key Size: %d bytes (expected: 1952)\n", keyInfo["PublicKeySize"])
+	fmt.Printf("  Private Key Size: %d bytes (expected: 4032)\n", keyInfo["PrivateKeySize"])
+	fmt.Printf("  Signature Size: %d bytes (expected: 3309)\n", keyInfo["SignatureSize"])
+	fmt.Printf("  Security Level: %d (NIST Level 3, AES-192 equivalent)\n", keyInfo["SecurityLevel"])
+	if keyInfo["PublicKeySize"] != 1952 || keyInfo["SignatureSize"] != 3309 {
+		log.Fatal("✗ Key sizes don't match ML-DSA-65 specification!")
+	}
+	fmt.Println("✓ All key sizes correct")
+	fmt.Println()
+
+	// Test 7: JSON serialization (as used in blockchain)
+	fmt.Println("Test 7: Testing signature JSON serialization...")
+	sigJSON, err := json.Marshal(testSig)
+	if err != nil {
+		log.Fatalf("Failed to marshal signature: %v", err)
+	}
+	
+	var deserializedSig pqcrypto.DilithiumSignature
+	err = json.Unmarshal(sigJSON, &deserializedSig)
+	if err != nil {
+		log.Fatalf("Failed to unmarshal signature: %v", err)
+	}
+	
+	// Verify deserialized signature
+	err = verifier.Verify(testMsg, &deserializedSig, "test-issuer")
+	if err != nil {
+		log.Fatalf("Deserialized signature verification failed: %v", err)
+	}
+	fmt.Println("✓ Signature serialization/deserialization working")
+	fmt.Println()
+
+	fmt.Println("=== ALL TESTS PASSED ===")
+	fmt.Println()
+	fmt.Println("✓ Real ML-DSA-65 (Dilithium) cryptography is fully functional")
+	fmt.Println("✓ Phase 4 production-ready post-quantum signatures verified")
+	fmt.Println("✓ Ready for blockchain deployment")
+}

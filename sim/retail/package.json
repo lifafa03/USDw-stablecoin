@@ -1,0 +1,33 @@
+{
+  "name": "@genusd/retail-sim",
+  "version": "1.0.0",
+  "description": "Retail Payment Simulation Engine for GENUSD Stablecoin",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "sim": "node dist/index.js",
+    "generate-users": "node dist/usergen.js",
+    "run-payments": "node dist/payment-sim.js",
+    "analyze": "node dist/metrics.js"
+  },
+  "keywords": [
+    "genusd",
+    "simulation",
+    "payment",
+    "performance",
+    "hyperledger-fabric"
+  ],
+  "author": "GENUSD Team",
+  "license": "MIT",
+  "dependencies": {
+    "fabric-network": "^2.2.20",
+    "seedrandom": "^3.0.5",
+    "cli-table3": "^0.6.3",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/seedrandom": "^3.0.5",
+    "typescript": "^5.3.2"
+  }
+}
