@@ -1,0 +1,25 @@
+{
+  "generated_at": "2025-12-09T22:20:00.000Z",
+  "seed": "genusd-retail-sim-funded",
+  "total_users": 10,
+  "config": {
+    "num_users": 10,
+    "seed": "genusd-retail-sim-funded",
+    "min_balance": 500000,
+    "max_balance": 1000000,
+    "utxos_per_user": { "min": 1, "max": 1 },
+    "output_file": "/home/rsolipuram/stablecoin-fabric/sim/results/users.json"
+  },
+  "users": [
+    { "user_id": "User_00000", "kyc_level": "None", "kyc_status": "Approved", "governance_tags": ["retail"], "initial_balance": 624508, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00001", "kyc_level": "Basic", "kyc_status": "Approved", "governance_tags": ["retail"], "initial_balance": 743948, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00002", "kyc_level": "Enhanced", "kyc_status": "Approved", "governance_tags": ["institutional"], "initial_balance": 1625800, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00003", "kyc_level": "Basic", "kyc_status": "Approved", "governance_tags": ["retail"], "initial_balance": 593348, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00004", "kyc_level": "Enhanced", "kyc_status": "Approved", "governance_tags": ["retail"], "initial_balance": 922098, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00005", "kyc_level": "Basic", "kyc_status": "Approved", "governance_tags": ["retail"], "initial_balance": 500000, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00006", "kyc_level": "Enhanced", "kyc_status": "Approved", "governance_tags": ["institutional"], "initial_balance": 500000, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00007", "kyc_level": "None", "kyc_status": "Approved", "governance_tags": ["retail"], "initial_balance": 500000, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00008", "kyc_level": "Basic", "kyc_status": "Approved", "governance_tags": ["retail"], "initial_balance": 500000, "utxos": [], "created_at": 1733781600000 },
+    { "user_id": "User_00009", "kyc_level": "Enhanced", "kyc_status": "Approved", "governance_tags": ["institutional"], "initial_balance": 500000, "utxos": [], "created_at": 1733781600000 }
+  ]
+}

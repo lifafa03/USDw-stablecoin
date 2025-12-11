@@ -144,7 +144,7 @@ export class PaymentSimulator {
           throw new Error('Contract not initialized');
         }
 
-        // Submit transfer using SimpleTransfer
+        // Submit transfer using Transfer function
         await this.contract.submitTransaction(
           'SimpleTransfer',
           sender.user_id,

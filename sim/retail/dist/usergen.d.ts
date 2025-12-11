@@ -41,7 +41,7 @@ export declare class UserGenerator {
      */
     generateUsers(): TestUser[];
     /**
-     * Pre-mint initial balances for all users using SimpleMint
+     * Pre-mint initial balances for all users using Mint
      */
     preMintBalances(gateway: Gateway): Promise<void>;
     /**

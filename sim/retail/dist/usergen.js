@@ -130,7 +130,7 @@ class UserGenerator {
         return this.users;
     }
     /**
-     * Pre-mint initial balances for all users using SimpleMint
+     * Pre-mint initial balances for all users using Mint
      */
     async preMintBalances(gateway) {
         console.log('\nPre-minting initial balances...');

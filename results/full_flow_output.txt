@@ -1,0 +1,31 @@
+
+=== FULL FLOW DEMO: Wallet + Credit + Cross-Border Remittance ===
+
+[2025-12-10T00:39:03.776744] Registered borrower: alice_us
+
+Loan assessment:
+  Approved: True, Tier: STANDARD, Approved Amount: $500.00
+
+Loan disbursed to wallet wallet-alice_us-1765327143: $500.00
+Current wallet balance: $500.00
+
+--- REMITTANCE COMPARISON ---
+Traditional: Sent $100.00, Fee $8.00, Received $92.00, Time 2 days
+USDw Wallet: Sent $100.00, Fee $0.02, Received $99.98, Time 1 minutes
+
+--- WALLET TRANSFER EXECUTED ---
+tx_id: tx-1765327143
+timestamp: 2025-12-10T00:39:03.776898Z
+from: alice_us
+to: +639171234567
+amount: 100.0
+status: completed
+note: Simulated USDw wallet transfer; instant settlement in receiver wallet
+
+Wallet new balance: $400.00
+
+=== SUMMARY FOR SLIDES ===
+- Borrower alice_us used wallet wallet-alice_us-1765327143 to send $100.00 to +639171234567.
+- Wallet path saved $7.98 compared to traditional channel and completed in minutes instead of days.
+
+Full flow complete. Use this output in your slides to show end-to-end connection: credit -> wallet -> remittance.

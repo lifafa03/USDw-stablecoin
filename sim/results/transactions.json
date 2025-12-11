@@ -1,0 +1,319 @@
+{
+  "completed_at": "2025-12-09T22:40:15.973Z",
+  "config": {
+    "users_file": "/home/rsolipuram/stablecoin-fabric/sim/results/users.json",
+    "num_transactions": 30,
+    "traffic_pattern": "uniform",
+    "seed": "genusd-retail-sim-2025-payments",
+    "output_file": "/home/rsolipuram/stablecoin-fabric/sim/results/transactions.json",
+    "burst_size": 50,
+    "burst_interval_ms": 100,
+    "max_concurrent": 10,
+    "retry_attempts": 3
+  },
+  "total_transactions": 30,
+  "successful": 0,
+  "failed": 30,
+  "transactions": [
+    {
+      "tx_id": "tx_1765320014638_9377",
+      "sender": "User_00001",
+      "receiver": "User_00008",
+      "amount": 5938,
+      "timestamp": 1765320014638,
+      "latency_ms": 428,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 5938\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 5938"
+    },
+    {
+      "tx_id": "tx_1765320014658_6335",
+      "sender": "User_00002",
+      "receiver": "User_00004",
+      "amount": 1194,
+      "timestamp": 1765320014658,
+      "latency_ms": 460,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 1194\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 1194"
+    },
+    {
+      "tx_id": "tx_1765320014665_5693",
+      "sender": "User_00002",
+      "receiver": "User_00004",
+      "amount": 3802,
+      "timestamp": 1765320014665,
+      "latency_ms": 429,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 3802\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 3802"
+    },
+    {
+      "tx_id": "tx_1765320014672_4569",
+      "sender": "User_00007",
+      "receiver": "User_00001",
+      "amount": 7824,
+      "timestamp": 1765320014672,
+      "latency_ms": 446,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 7824\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 7824"
+    },
+    {
+      "tx_id": "tx_1765320014678_8907",
+      "sender": "User_00008",
+      "receiver": "User_00007",
+      "amount": 6079,
+      "timestamp": 1765320014678,
+      "latency_ms": 444,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6079\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6079"
+    },
+    {
+      "tx_id": "tx_1765320014686_9575",
+      "sender": "User_00003",
+      "receiver": "User_00007",
+      "amount": 2319,
+      "timestamp": 1765320014686,
+      "latency_ms": 436,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 2319\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 2319"
+    },
+    {
+      "tx_id": "tx_1765320014690_4062",
+      "sender": "User_00006",
+      "receiver": "User_00004",
+      "amount": 2388,
+      "timestamp": 1765320014690,
+      "latency_ms": 433,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 2388\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 2388"
+    },
+    {
+      "tx_id": "tx_1765320014693_3208",
+      "sender": "User_00006",
+      "receiver": "User_00009",
+      "amount": 5040,
+      "timestamp": 1765320014693,
+      "latency_ms": 429,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 5040\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 5040"
+    },
+    {
+      "tx_id": "tx_1765320014697_4485",
+      "sender": "User_00008",
+      "receiver": "User_00000",
+      "amount": 6931,
+      "timestamp": 1765320014697,
+      "latency_ms": 427,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6931\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6931"
+    },
+    {
+      "tx_id": "tx_1765320014702_8280",
+      "sender": "User_00000",
+      "receiver": "User_00005",
+      "amount": 1337,
+      "timestamp": 1765320014702,
+      "latency_ms": 420,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 1337\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 1337"
+    },
+    {
+      "tx_id": "tx_1765320015124_4085",
+      "sender": "User_00009",
+      "receiver": "User_00006",
+      "amount": 3597,
+      "timestamp": 1765320015124,
+      "latency_ms": 423,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 3597\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 3597"
+    },
+    {
+      "tx_id": "tx_1765320015127_9846",
+      "sender": "User_00003",
+      "receiver": "User_00009",
+      "amount": 6991,
+      "timestamp": 1765320015127,
+      "latency_ms": 421,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6991\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6991"
+    },
+    {
+      "tx_id": "tx_1765320015129_9993",
+      "sender": "User_00009",
+      "receiver": "User_00006",
+      "amount": 9168,
+      "timestamp": 1765320015129,
+      "latency_ms": 419,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 9168\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 9168"
+    },
+    {
+      "tx_id": "tx_1765320015132_8483",
+      "sender": "User_00009",
+      "receiver": "User_00007",
+      "amount": 8461,
+      "timestamp": 1765320015132,
+      "latency_ms": 418,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 8461\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 8461"
+    },
+    {
+      "tx_id": "tx_1765320015134_8709",
+      "sender": "User_00005",
+      "receiver": "User_00000",
+      "amount": 641,
+      "timestamp": 1765320015134,
+      "latency_ms": 416,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 641\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 641"
+    },
+    {
+      "tx_id": "tx_1765320015137_1886",
+      "sender": "User_00003",
+      "receiver": "User_00001",
+      "amount": 3011,
+      "timestamp": 1765320015137,
+      "latency_ms": 413,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 3011\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 3011"
+    },
+    {
+      "tx_id": "tx_1765320015140_7579",
+      "sender": "User_00001",
+      "receiver": "User_00000",
+      "amount": 222,
+      "timestamp": 1765320015140,
+      "latency_ms": 410,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 222\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 222"
+    },
+    {
+      "tx_id": "tx_1765320015143_5352",
+      "sender": "User_00005",
+      "receiver": "User_00004",
+      "amount": 9561,
+      "timestamp": 1765320015143,
+      "latency_ms": 397,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 9561\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 9561"
+    },
+    {
+      "tx_id": "tx_1765320015145_1006",
+      "sender": "User_00007",
+      "receiver": "User_00002",
+      "amount": 3145,
+      "timestamp": 1765320015145,
+      "latency_ms": 406,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 3145\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 3145"
+    },
+    {
+      "tx_id": "tx_1765320015148_2425",
+      "sender": "User_00003",
+      "receiver": "User_00008",
+      "amount": 6663,
+      "timestamp": 1765320015148,
+      "latency_ms": 363,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6663\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6663"
+    },
+    {
+      "tx_id": "tx_1765320015551_2294",
+      "sender": "User_00007",
+      "receiver": "User_00006",
+      "amount": 5032,
+      "timestamp": 1765320015551,
+      "latency_ms": 422,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 5032\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 5032"
+    },
+    {
+      "tx_id": "tx_1765320015554_8586",
+      "sender": "User_00000",
+      "receiver": "User_00009",
+      "amount": 4450,
+      "timestamp": 1765320015554,
+      "latency_ms": 415,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 4450\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 4450"
+    },
+    {
+      "tx_id": "tx_1765320015556_2552",
+      "sender": "User_00009",
+      "receiver": "User_00003",
+      "amount": 2644,
+      "timestamp": 1765320015556,
+      "latency_ms": 410,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 2644\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 2644"
+    },
+    {
+      "tx_id": "tx_1765320015559_7933",
+      "sender": "User_00000",
+      "receiver": "User_00005",
+      "amount": 1319,
+      "timestamp": 1765320015559,
+      "latency_ms": 412,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 1319\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 1319"
+    },
+    {
+      "tx_id": "tx_1765320015562_8411",
+      "sender": "User_00007",
+      "receiver": "User_00002",
+      "amount": 7027,
+      "timestamp": 1765320015562,
+      "latency_ms": 407,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 7027\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 7027"
+    },
+    {
+      "tx_id": "tx_1765320015564_7927",
+      "sender": "User_00000",
+      "receiver": "User_00002",
+      "amount": 715,
+      "timestamp": 1765320015564,
+      "latency_ms": 367,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 715\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 715"
+    },
+    {
+      "tx_id": "tx_1765320015567_5802",
+      "sender": "User_00004",
+      "receiver": "User_00001",
+      "amount": 6826,
+      "timestamp": 1765320015567,
+      "latency_ms": 399,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6826\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6826"
+    },
+    {
+      "tx_id": "tx_1765320015571_6678",
+      "sender": "User_00007",
+      "receiver": "User_00008",
+      "amount": 6226,
+      "timestamp": 1765320015571,
+      "latency_ms": 399,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6226\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6226"
+    },
+    {
+      "tx_id": "tx_1765320015573_4615",
+      "sender": "User_00006",
+      "receiver": "User_00000",
+      "amount": 2832,
+      "timestamp": 1765320015573,
+      "latency_ms": 399,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 2832\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 2832"
+    },
+    {
+      "tx_id": "tx_1765320015576_6710",
+      "sender": "User_00004",
+      "receiver": "User_00008",
+      "amount": 5908,
+      "timestamp": 1765320015576,
+      "latency_ms": 395,
+      "success": false,
+      "error": "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 5908\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 5908"
+    }
+  ]
+}

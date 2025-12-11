@@ -129,7 +129,7 @@ export class UserGenerator {
   }
 
   /**
-   * Pre-mint initial balances for all users using SimpleMint
+   * Pre-mint initial balances for all users using Mint
    */
   async preMintBalances(gateway: Gateway): Promise<void> {
     console.log('\nPre-minting initial balances...');

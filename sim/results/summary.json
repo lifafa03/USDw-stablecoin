@@ -1,0 +1,65 @@
+{
+  "generated_at": "2025-12-09T22:40:16.375Z",
+  "metrics": {
+    "total_transactions": 30,
+    "successful": 0,
+    "failed": 30,
+    "success_rate": 0,
+    "latency": {
+      "avg_ms": 0,
+      "min_ms": 0,
+      "max_ms": 0,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 0
+    },
+    "throughput": {
+      "total_duration_s": 0.94,
+      "txs_per_second": 31.98
+    },
+    "errors": {
+      "total": 30,
+      "by_type": {
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 5938\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 5938": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 1194\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 1194": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 3802\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 3802": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 7824\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 7824": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6079\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6079": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 2319\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 2319": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 2388\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 2388": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 5040\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 5040": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6931\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6931": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 1337\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 1337": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 3597\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 3597": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6991\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6991": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 9168\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 9168": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 8461\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 8461": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 641\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 641": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 3011\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 3011": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 222\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 222": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 9561\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 9561": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 3145\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 3145": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6663\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6663": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 5032\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 5032": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 4450\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 4450": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 2644\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 2644": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 1319\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 1319": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 7027\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 7027": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 715\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 715": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6826\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6826": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 6226\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 6226": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 2832\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 2832": 1,
+        "No valid responses from any peers. Errors:\n    peer=peer0.org1.example.com, status=500, message=insufficient balance: have 0, need 5908\n    peer=peer0.org2.example.com, status=500, message=insufficient balance: have 0, need 5908": 1
+      }
+    },
+    "supply_check": {
+      "expected_supply": 37549585,
+      "actual_supply": 37549585,
+      "matches": true
+    }
+  },
+  "bottleneck_analysis": [
+    "⚠️  Low success rate (0.00%) - investigate transaction failures"
+  ]
+}

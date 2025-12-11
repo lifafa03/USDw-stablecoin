@@ -1,0 +1,12 @@
+{
+  "alice_us": {
+    "status": "approved",
+    "tier": "FULL",
+    "verified_on": "2025-11-01T10:00:00Z"
+  },
+  "bob_business": {
+    "status": "pending",
+    "tier": "LIMITED",
+    "verified_on": null
+  }
+}
